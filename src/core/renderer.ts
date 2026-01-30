@@ -445,6 +445,13 @@ function createTextSprite(text: string, opts: { color: string; font: string }): 
   texture.needsUpdate = true
 
   const material = new THREE.SpriteMaterial({ map: texture, transparent: true })
+  // SpriteMaterial 默认 depthWrite=true，会导致「透明背景」也写入深度缓冲，
+  // 从而把后面的透明面片“挖空”，表现为每个标签出现一个大方块。
+  material.depthWrite = false
+  // 标签作为 UI 标注，优先保证可读性；禁用 depthTest 避免被模型遮挡/闪烁
+  material.depthTest = false
+  // 轻量裁剪透明像素，避免无意义片元参与混合
+  material.alphaTest = 0.01
   return new THREE.Sprite(material)
 }
 
