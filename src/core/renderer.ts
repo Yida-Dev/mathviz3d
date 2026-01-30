@@ -21,6 +21,7 @@ export class Renderer {
   private readonly auxiliaryGroup = new THREE.Group()
 
   private readonly pointMeshes = new Map<string, THREE.Object3D>()
+  private readonly labelSprites = new Map<string, THREE.Sprite>()
   private readonly animationObjects = new Map<string, THREE.Object3D>()
   private readonly animationUpdaters = new Map<string, (ctx: EvalContext) => void>()
   private disposed = false
@@ -120,6 +121,10 @@ export class Renderer {
 
       const coord = typeof entry === 'function' ? entry(ctx) : entry
       mesh.position.set(coord.x, coord.y, coord.z)
+
+      // 标签要跟随点移动（动点/翻折点等都是函数点）
+      const label = this.labelSprites.get(id)
+      if (label) label.position.set(coord.x, coord.y + 0.2, coord.z)
     }
 
     // 动画元素更新（辅助线/面/四面体等）
@@ -179,6 +184,10 @@ export class Renderer {
     this.baseGroup.clear()
     this.pointsGroup.clear()
     this.labelsGroup.clear()
+    this.pointMeshes.clear()
+    this.labelSprites.clear()
+    this.animationObjects.clear()
+    this.animationUpdaters.clear()
 
     this.container.removeChild(this.renderer.domElement)
   }
@@ -233,6 +242,7 @@ export class Renderer {
       label.position.set(v.x, v.y + 0.2, v.z)
       label.scale.set(0.5, 0.5, 0.5)
       this.labelsGroup.add(label)
+      this.labelSprites.set(id, label)
     }
 
     // 2) 语义点（特殊点/动点/翻折点）
@@ -252,6 +262,7 @@ export class Renderer {
       label.position.set(coord.x, coord.y + 0.2, coord.z)
       label.scale.set(0.5, 0.5, 0.5)
       this.labelsGroup.add(label)
+      this.labelSprites.set(id, label)
     }
   }
 
