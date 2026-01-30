@@ -482,8 +482,17 @@ function applyOpacity(obj: THREE.Object3D, opacity: number): void {
 
 function setOpacity(material: any, opacity: number): void {
   if (typeof material.opacity !== 'number') return
+  // 透明轨道以「0~1 的强度」表达更通用：
+  // - 对于默认就是半透明的对象（例如 geometry 的面片 opacity=0.15），t=1 应回到 0.15，而不是变成 1
+  // - 对于默认不透明的对象（例如线框/点/标签 opacity=1），行为保持不变
+  //
+  // 因此这里将轨道 opacity 作为“乘子”，并缓存每个材质的初始 opacity 作为基准值。
+  if (!material.userData) material.userData = {}
+  const base = typeof material.userData.__baseOpacity === 'number' ? material.userData.__baseOpacity : material.opacity
+  material.userData.__baseOpacity = base
+
   material.transparent = true
-  material.opacity = opacity
+  material.opacity = base * clamp01(opacity)
 }
 
 function applyHighlight(obj: THREE.Object3D, color: string | null): void {
@@ -518,4 +527,11 @@ function pickPointStyle(
     return { geom: geoms.dynamicGeom, mat: new THREE.MeshStandardMaterial({ color: 0xf59e0b, emissive: 0xf59e0b, emissiveIntensity: 0.3 }) }
   }
   return { geom: geoms.specialGeom, mat: new THREE.MeshStandardMaterial({ color: 0x2563eb, emissive: 0x2563eb, emissiveIntensity: 0.2 }) }
+}
+
+function clamp01(value: number): number {
+  if (!Number.isFinite(value)) return 0
+  if (value < 0) return 0
+  if (value > 1) return 1
+  return value
 }
