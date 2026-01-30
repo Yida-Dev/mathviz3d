@@ -22,6 +22,27 @@ function expectVec3Close(actual: Vec3, expected: [number, number, number], toler
   expect(Math.abs(actual.z - expected[2])).toBeLessThanOrEqual(tolerance)
 }
 
+function cross(a: Vec3, b: Vec3): Vec3 {
+  return {
+    x: a.y * b.z - a.z * b.y,
+    y: a.z * b.x - a.x * b.z,
+    z: a.x * b.y - a.y * b.x,
+  }
+}
+
+function sub(a: Vec3, b: Vec3): Vec3 {
+  return { x: a.x - b.x, y: a.y - b.y, z: a.z - b.z }
+}
+
+function dot(a: Vec3, b: Vec3): number {
+  return a.x * b.x + a.y * b.y + a.z * b.z
+}
+
+function avg(points: Vec3[]): Vec3 {
+  const sum = points.reduce((acc, p) => ({ x: acc.x + p.x, y: acc.y + p.y, z: acc.z + p.z }), { x: 0, y: 0, z: 0 })
+  return { x: sum.x / points.length, y: sum.y / points.length, z: sum.z / points.length }
+}
+
 describe('CoordCalculator', () => {
   describe('案例1：cube + 动点 + volume', () => {
     const calc = new CoordCalculator(case1Semantic as any)
@@ -200,6 +221,39 @@ describe('CoordCalculator', () => {
       expectVec3Close(calc.getVertexCoord('C1'), [1, 2, 3], 1e-12)
       expect(calc.getBaseEdges().length).toBeGreaterThan(0)
       expect(calc.getBaseFaces().length).toBeGreaterThan(0)
+    })
+
+    it('cube/tetrahedron 的 baseFaces 绕序应使法线指向外部（CCW）', () => {
+      const cube: any = {
+        problemId: 'cube',
+        problemText: '',
+        baseGeometry: { type: 'cube', size: 1 },
+        points: [],
+        question: '',
+      }
+      const cubeCalc = new CoordCalculator(cube)
+      for (const face of cubeCalc.getBaseFaces()) {
+        const pts = face.map((id) => cubeCalc.getVertexCoord(id))
+        const n = cross(sub(pts[1], pts[0]), sub(pts[2], pts[0]))
+        const c = avg(pts)
+        // 对于以原点为中心的凸多面体：面中心向量与外法线同向，点积应 > 0
+        expect(dot(n, c)).toBeGreaterThan(0)
+      }
+
+      const tetra: any = {
+        problemId: 'tetra',
+        problemText: '',
+        baseGeometry: { type: 'tetrahedron', size: 1 },
+        points: [],
+        question: '',
+      }
+      const tetraCalc = new CoordCalculator(tetra)
+      for (const face of tetraCalc.getBaseFaces()) {
+        const pts = face.map((id) => tetraCalc.getVertexCoord(id))
+        const n = cross(sub(pts[1], pts[0]), sub(pts[2], pts[0]))
+        const c = avg(pts)
+        expect(dot(n, c)).toBeGreaterThan(0)
+      }
     })
 
     it('缺少测量定义/缺少参数/不支持几何体类型时应抛错', () => {
