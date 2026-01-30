@@ -4,6 +4,8 @@ import { Player } from '@/core/player'
 
 import case1Semantic from '../fixtures/case1/semantic.json'
 import case1Script from '../fixtures/case1/animation.json'
+import case2Semantic from '../fixtures/case2/semantic.json'
+import case2Script from '../fixtures/case2/animation.json'
 import case3Semantic from '../fixtures/case3/semantic.json'
 import case3Script from '../fixtures/case3/animation.json'
 
@@ -174,6 +176,14 @@ describe('Player', () => {
     expect(state.subtitle).toBe('hello')
     expect(state.activeMeasurements).toEqual(['m1'])
     expect(state.visibleElements.has('geometry')).toBe(true)
+  })
+
+  it('视频模式：基础点（顶点/语义点）默认应可见', () => {
+    const { timeline } = compiler.compile(case2Script as any, case2Semantic as any)
+    const state = player.getState(timeline, 0)
+    for (const id of ['A', 'B', 'C', 'D', 'E', 'F']) {
+      expect(state.visibleElements.has(id)).toBe(true)
+    }
   })
 
   it('任意 seek：折叠场景开始/结束 foldAngles 应正确', () => {

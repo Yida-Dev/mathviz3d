@@ -17,7 +17,9 @@ export class Compiler {
     const calc = new CoordCalculator(semantic)
 
     // ===== 继承状态（跨场景） =====
-    const visible = new Set<string>()
+    // 约定：视频讲解模式下，基础点（顶点 + 语义点 + 翻折点）默认可见，
+    // 否则脚本只做 fadeIn geometry/vertexLabels 时会出现「只有标签，没有点球体」的体验问题。
+    const visible = new Set<string>(defaultVisiblePointIds(semantic))
     const opacities = new Map<string, number>()
 
     const paramValues = new Map<string, number>((semantic.params ?? []).map((p) => [p.id, p.default]))
@@ -140,6 +142,33 @@ export class Compiler {
       timeline: { duration: globalCursor, scenes },
       elementRegistry: { elements: registry },
     }
+  }
+}
+
+function defaultVisiblePointIds(semantic: SemanticDefinition): string[] {
+  const ids = new Set<string>()
+  // 基础顶点
+  for (const id of baseVertexIds(semantic.baseGeometry.type)) ids.add(id)
+  // 语义点（E/F/P/Q...）
+  for (const p of semantic.points ?? []) ids.add(p.id)
+  // 翻折点（A'...）
+  for (const fold of semantic.folds ?? []) {
+    for (const id of fold.foldedPoints) ids.add(id)
+  }
+  return [...ids]
+}
+
+function baseVertexIds(type: SemanticDefinition['baseGeometry']['type']): string[] {
+  switch (type) {
+    case 'cube':
+    case 'cuboid':
+      return ['A', 'B', 'C', 'D', 'A1', 'B1', 'C1', 'D1']
+    case 'tetrahedron':
+      return ['A', 'B', 'C', 'D']
+    case 'square':
+      return ['A', 'B', 'C', 'D']
+    default:
+      return []
   }
 }
 
