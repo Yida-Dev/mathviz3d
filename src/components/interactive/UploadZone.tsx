@@ -26,6 +26,7 @@ export function UploadZone(props: UploadZoneProps) {
         type="file"
         accept="image/*"
         className="hidden"
+        data-testid="upload-input"
         onChange={(e) => {
           const file = e.target.files?.[0]
           if (file) onFile?.(file)
@@ -34,6 +35,7 @@ export function UploadZone(props: UploadZoneProps) {
 
       <label
         htmlFor={inputId}
+        data-testid="upload-zone"
         className={cn(
           'h-32 w-full rounded-xl border bg-slate-50 flex items-center justify-center text-center cursor-pointer select-none',
           loading ? 'border-primary-600 bg-blue-50/50' : isDragging ? 'border-primary-600 bg-blue-50/50' : 'border-dashed border-slate-200',
@@ -65,4 +67,3 @@ export function UploadZone(props: UploadZoneProps) {
     </div>
   )
 }
-

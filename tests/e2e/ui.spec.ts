@@ -41,6 +41,25 @@ test.describe('Phase 4 UI', () => {
     await expect.poll(async () => await readFirstNumber(cell)).not.toBe(before)
   })
 
+  test('交互模式：UploadZone 上传应触发 mock AI 并切换用例（case1 → case3）', async ({ page }) => {
+    await page.goto('/?case=case1&mode=interactive')
+
+    // 展开侧栏（Tablet 默认折叠）
+    await page.getByRole('button', { name: '打开侧栏' }).click()
+
+    const panel = page.getByTestId('ai-result-panel')
+    await expect(panel).toContainText('cube')
+
+    await page.getByTestId('upload-input').setInputFiles({
+      name: 'case3.png',
+      mimeType: 'image/png',
+      buffer: Buffer.from([1, 2, 3, 4]),
+    })
+
+    // mock 有固定延迟，等待结果生效
+    await expect(panel).toContainText('square')
+  })
+
   test('视频模式：上一步/下一步应切换字幕（case1）', async ({ page }) => {
     await page.goto('/?case=case1&mode=video')
 
@@ -54,6 +73,28 @@ test.describe('Phase 4 UI', () => {
 
     await page.getByRole('button', { name: '上一步' }).click()
     await expect(subtitle).toContainText('正方体')
+  })
+
+  test('视频模式：进度条应显示场景分割点标记（case1）', async ({ page }) => {
+    await page.goto('/?case=case1&mode=video')
+    const marks = page.getByTestId('timeline-marker')
+    await expect.poll(async () => await marks.count()).toBeGreaterThan(0)
+  })
+
+  test('视频模式：activeMeasurements 应显示并随场景切换（case1 volume_MPQN）', async ({ page }) => {
+    await page.goto('/?case=case1&mode=video')
+
+    // 展开侧栏（Tablet 默认折叠）
+    await page.getByRole('button', { name: '打开侧栏' }).click()
+
+    // intro -> mark-points -> dynamic-points -> tetrahedron -> explore
+    for (let i = 0; i < 4; i++) {
+      await page.getByRole('button', { name: '下一步' }).click()
+    }
+
+    const cell = page.getByTestId('measurement-volume_MPQN')
+    await expect(cell).toBeVisible()
+    await expect(cell).toContainText('0.0417')
   })
 })
 

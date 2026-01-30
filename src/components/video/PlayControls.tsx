@@ -10,10 +10,11 @@ export interface PlayControlsProps {
   onSeek: (time: number) => void
   onPrev?: () => void
   onNext?: () => void
+  markers?: number[] // 关键帧（秒）
 }
 
 export function PlayControls(props: PlayControlsProps) {
-  const { isPlaying, currentTime, duration, onPlay, onPause, onSeek, onPrev, onNext } = props
+  const { isPlaying, currentTime, duration, onPlay, onPause, onSeek, onPrev, onNext, markers } = props
 
   const canPlay = duration > 0
 
@@ -46,14 +47,36 @@ export function PlayControls(props: PlayControlsProps) {
       <div className="flex-1 flex items-center gap-3">
         <div className="text-xs font-mono font-bold text-primary-600 w-12 text-right">{formatTime(currentTime)}</div>
         <div className="flex-1">
-          <Slider
-            min={0}
-            max={Math.max(0, duration)}
-            step={0.01}
-            value={clamp(currentTime, 0, duration)}
-            onChange={(v) => onSeek(v)}
-            color="primary"
-          />
+          <div className="relative h-10 flex items-center">
+            {/* 关键帧标记：场景分割点 */}
+            {canPlay &&
+              (markers ?? [])
+                .filter((t) => Number.isFinite(t) && t > 0 && t < duration)
+                .map((t, idx) => {
+                  const left = (t / duration) * 100
+                  return (
+                    <span
+                      key={`${t}-${idx}`}
+                      data-testid="timeline-marker"
+                      className="pointer-events-none absolute top-1/2 -translate-y-1/2 -translate-x-1/2 h-2 w-2 rounded-full bg-primary-600"
+                      style={{ left: `${left}%` }}
+                      aria-hidden
+                    />
+                  )
+                })}
+
+            <div className="w-full">
+              <Slider
+                min={0}
+                max={Math.max(0, duration)}
+                step={0.01}
+                value={clamp(currentTime, 0, duration)}
+                onChange={(v) => onSeek(v)}
+                color="primary"
+                aria-label="播放进度"
+              />
+            </div>
+          </div>
         </div>
         <div className="text-xs font-mono text-slate-500 w-12">{formatTime(duration)}</div>
       </div>
@@ -90,4 +113,3 @@ function formatTime(sec: number): string {
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value))
 }
-

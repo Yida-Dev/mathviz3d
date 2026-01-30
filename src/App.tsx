@@ -9,6 +9,7 @@ import { AIResultPanel } from '@/components/interactive/AIResultPanel'
 import { MeasureCard } from '@/components/interactive/MeasureCard'
 import { ParamControls } from '@/components/interactive/ParamControls'
 import { UploadZone } from '@/components/interactive/UploadZone'
+import { SettingsModal } from '@/components/SettingsModal'
 import { ExplanationPanel } from '@/components/video/ExplanationPanel'
 import { ExportModal } from '@/components/video/ExportModal'
 import { PlayControls } from '@/components/video/PlayControls'
@@ -20,9 +21,12 @@ import { Player } from '@/core/player'
 import type { EvalContext, SemanticDefinition } from '@/core/types'
 import type { SceneState } from '@/core/scene-state'
 import { useAppMode, type AppMode } from '@/hooks/useAppMode'
+import { useApiSettings } from '@/hooks/useApiSettings'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
 import { useParams } from '@/hooks/useParams'
 import { usePlayer } from '@/hooks/usePlayer'
+import { runAiPipelineMock } from '@/services/ai-pipeline'
+import type { CaseId } from '@/types/app'
 
 import case1Semantic from '../tests/fixtures/case1/semantic.json'
 import case1Script from '../tests/fixtures/case1/animation.json'
@@ -31,8 +35,6 @@ import case2Script from '../tests/fixtures/case2/animation.json'
 import case3Semantic from '../tests/fixtures/case3/semantic.json'
 import case3Script from '../tests/fixtures/case3/animation.json'
 
-type CaseId = 'case1' | 'case2' | 'case3'
-
 function App() {
   const breakpoint = useBreakpoint()
 
@@ -40,6 +42,11 @@ function App() {
   const { mode, setMode } = useAppMode(initialFromUrl.mode)
 
   const [selectedCaseId, setSelectedCaseId] = useState<CaseId>(initialFromUrl.caseId)
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiError, setAiError] = useState<string | null>(null)
+
+  const apiSettings = useApiSettings()
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
   // Tablet 左侧面板折叠
   const [isLeftPanelOpen, setIsLeftPanelOpen] = useState<boolean>(() => {
@@ -100,6 +107,24 @@ function App() {
     const next = `${window.location.pathname}?${qs.toString()}`
     window.history.replaceState(null, '', next)
   }, [selectedCaseId, mode])
+
+  const handleCaseChange = (caseId: CaseId) => {
+    setAiError(null)
+    setSelectedCaseId(caseId)
+  }
+
+  const handleUploadFile = async (file: File) => {
+    setAiLoading(true)
+    setAiError(null)
+    try {
+      const result = await runAiPipelineMock(file)
+      setSelectedCaseId(result.caseId)
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setAiLoading(false)
+    }
+  }
 
   // ========== 交互模式 ==========
   const geometryData = useMemo(() => buildGeometryData(semantic), [semantic])
@@ -182,10 +207,33 @@ function App() {
     if (!timeline) return []
     return timeline.scenes.map((s) => ({
       id: s.id,
-      title: s.id,
+      title: makeSceneTitle(s.narration, s.id),
       timeLabel: formatTime(s.startTime),
     }))
   }, [compileResult])
+
+  const videoMeasurementItems = useMemo(() => {
+    if (mode !== 'video') return []
+    if (!videoState) return []
+    const ids = videoState.activeMeasurements ?? []
+    if (ids.length === 0) return []
+
+    const defMap = new Map((semantic.measurements ?? []).map((m) => [m.id, m]))
+    const ctx: EvalContext = { params: videoState.paramValues, foldAngles: videoState.foldAngles }
+
+    return ids.map((id) => {
+      const def = defMap.get(id)
+      const value = calc.getMeasurement(id, ctx)
+      const { text, unit } = formatMeasurement(def?.type ?? 'distance', value)
+      return {
+        id,
+        label: id,
+        value: text,
+        unit,
+        isConstant: constantMeasurements.has(id),
+      }
+    })
+  }, [mode, videoState, semantic.measurements, calc, constantMeasurements])
 
   // ========== 弹窗 ==========
   const [exportOpen, setExportOpen] = useState(false)
@@ -197,7 +245,18 @@ function App() {
         <>
           <LeftPanelSectionHeader icon="ph-image" title="题目来源" />
           <LeftPanelBody>
-            <UploadZone onFile={() => {}} />
+            <UploadZone loading={aiLoading} onFile={handleUploadFile} />
+            {aiError && (
+              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                <div className="flex items-start gap-2">
+                  <i className="ph-fill ph-warning-circle text-red-600 mt-0.5" aria-hidden />
+                  <div>
+                    <div className="font-bold">解析失败</div>
+                    <div className="mt-1">{aiError}</div>
+                  </div>
+                </div>
+              </div>
+            )}
             <AIResultPanel semantic={semantic} />
 
             <div>
@@ -216,6 +275,12 @@ function App() {
           <LeftPanelSectionHeader icon="ph-list" title="讲解大纲" />
           <LeftPanelBody>
             <ExplanationPanel steps={videoSteps} currentId={videoState?.currentSceneId ?? null} />
+            {videoMeasurementItems.length > 0 && (
+              <div>
+                <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">测量值</div>
+                <MeasureCard items={videoMeasurementItems} />
+              </div>
+            )}
           </LeftPanelBody>
         </>
       )}
@@ -269,6 +334,7 @@ function App() {
           onSeek={seek}
           onPrev={onPrevScene}
           onNext={onNextScene}
+          markers={compileResult?.timeline.scenes.map((s) => s.startTime) ?? []}
         />
       </TimelinePanel>
     ) : undefined
@@ -285,7 +351,8 @@ function App() {
             isLeftPanelOpen={isLeftPanelOpen}
             onToggleLeftPanel={() => setIsLeftPanelOpen((v) => !v)}
             selectedCaseId={selectedCaseId}
-            onCaseChange={(v) => setSelectedCaseId(v as CaseId)}
+            onCaseChange={(v) => handleCaseChange(v as CaseId)}
+            onOpenSettings={() => setSettingsOpen(true)}
             onExport={() => setExportOpen(true)}
           />
         }
@@ -298,6 +365,14 @@ function App() {
       />
 
       <ExportModal open={exportOpen} onClose={() => setExportOpen(false)} />
+      <SettingsModal
+        open={settingsOpen}
+        draft={apiSettings.draft}
+        onChangeDraft={apiSettings.setDraft}
+        onClose={() => setSettingsOpen(false)}
+        onSave={apiSettings.save}
+        onResetToDefault={apiSettings.resetToDefault}
+      />
     </>
   )
 }
@@ -389,6 +464,13 @@ function formatTime(sec: number): string {
   const mm = String(Math.floor(s / 60)).padStart(2, '0')
   const ss = String(s % 60).padStart(2, '0')
   return `${mm}:${ss}`
+}
+
+function makeSceneTitle(narration: string, fallback: string): string {
+  const text = String(narration ?? '').trim()
+  if (!text) return fallback
+  const max = 16
+  return text.length > max ? `${text.slice(0, max)}…` : text
 }
 
 export default App

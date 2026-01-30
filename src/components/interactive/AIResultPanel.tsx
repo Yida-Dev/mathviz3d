@@ -8,7 +8,7 @@ export function AIResultPanel(props: { semantic: SemanticDefinition }) {
   const measurements = (semantic.measurements ?? []).map((m) => m.id)
 
   return (
-    <div className="rounded-xl bg-blue-50/50 border border-blue-100 p-4">
+    <div className="rounded-xl bg-blue-50/50 border border-blue-100 p-4" data-testid="ai-result-panel">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           <i className="ph-duotone ph-magic-wand text-primary-600 text-lg" aria-hidden />
@@ -37,4 +37,3 @@ export function AIResultPanel(props: { semantic: SemanticDefinition }) {
     </div>
   )
 }
-
