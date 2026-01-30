@@ -40,7 +40,9 @@ const DEFAULT_CUBE_EDGES: Array<[string, string]> = [
 ]
 
 const DEFAULT_CUBE_FACES: string[][] = [
-  ['A', 'B', 'C', 'D'],
+  // 约定：从几何体外部看，顶点绕序为逆时针（CCW），以保证法线指向外部
+  // cube 的 A/B/C/D 在 z = -s 平面；原顺序会让该面法线指向内部（+z）
+  ['A', 'D', 'C', 'B'],
   ['A1', 'B1', 'C1', 'D1'],
   ['A', 'B', 'B1', 'A1'],
   ['B', 'C', 'C1', 'B1'],
@@ -59,9 +61,10 @@ const DEFAULT_TETRA_EDGES: Array<[string, string]> = [
 
 const DEFAULT_TETRA_FACES: string[][] = [
   ['A', 'B', 'C'],
-  ['A', 'B', 'D'],
-  ['B', 'C', 'D'],
-  ['C', 'A', 'D'],
+  // 其余三个面需要调整绕序，保证法线指向外部
+  ['A', 'D', 'B'],
+  ['B', 'D', 'C'],
+  ['C', 'D', 'A'],
 ]
 
 const DEFAULT_SQUARE_EDGES: Array<[string, string]> = [
