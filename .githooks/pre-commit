@@ -1,0 +1,20 @@
+#!/bin/bash
+# Pre-commit hook: 验证 commit 作者邮箱
+
+EXPECTED_EMAIL="reyifeijun@gmail.com"
+CURRENT_EMAIL=$(git config user.email)
+
+if [ "$CURRENT_EMAIL" != "$EXPECTED_EMAIL" ]; then
+    echo "Error: Git user.email must be $EXPECTED_EMAIL"
+    echo "Current: $CURRENT_EMAIL"
+    echo "Run: git config user.email $EXPECTED_EMAIL"
+    exit 1
+fi
+
+# 检查是否有 .env 文件被提交（排除 .env.example）
+if git diff --cached --name-only | grep -E '^\.env$|^\.env\.local$|^\.env\..+$' | grep -v '\.example$'; then
+    echo "Error: Attempting to commit .env file"
+    exit 1
+fi
+
+exit 0

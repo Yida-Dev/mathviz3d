@@ -1,0 +1,73 @@
+{
+  "title": "正方体动点问题 - 三棱锥体积",
+  "scenes": [
+    {
+      "id": "intro",
+      "narration": "这是一个棱长为1的正方体ABCD-A1B1C1D1。",
+      "camera": "isometric",
+      "actions": [
+        { "do": "fadeIn", "target": "geometry", "duration": 1.5 },
+        { "do": "fadeIn", "target": "vertexLabels", "duration": 1 }
+      ]
+    },
+    {
+      "id": "mark-points",
+      "narration": "M是AD1的中点，N是AC的中点，E是B1D1的中点。",
+      "camera": {
+        "spherical": { "radius": 2.2, "theta": 60, "phi": 30 },
+        "lookAt": "M",
+        "transition": "ease-in-out"
+      },
+      "actions": [
+        { "do": "drawLine", "id": "line_AD1", "from": "A", "to": "D1", "style": "dashed", "color": "#888888" },
+        { "do": "highlight", "target": "M", "color": "#ff4444" },
+        { "do": "drawLine", "id": "line_AC", "from": "A", "to": "C", "style": "dashed", "color": "#888888" },
+        { "do": "highlight", "target": "N", "color": "#44ff44" },
+        { "do": "drawLine", "id": "line_B1D1", "from": "B1", "to": "D1", "style": "dashed", "color": "#888888" },
+        { "do": "highlight", "target": "E", "color": "#4444ff" }
+      ]
+    },
+    {
+      "id": "dynamic-points",
+      "narration": "P是线段BE上的动点，Q是线段CD1上的动点。",
+      "camera": "isometric",
+      "actions": [
+        { "do": "showPath", "id": "path_BE", "from": "B", "to": "E", "color": "#ffaa00" },
+        { "do": "fadeIn", "target": "P" },
+        { "do": "showPath", "id": "path_CD1", "from": "C", "to": "D1", "color": "#ffaa00" },
+        { "do": "fadeIn", "target": "Q" }
+      ]
+    },
+    {
+      "id": "tetrahedron",
+      "narration": "题目要求我们研究三棱锥M-PQN的体积。",
+      "camera": {
+        "spherical": { "radius": 2.2, "theta": 45, "phi": 40 },
+        "lookAt": "center",
+        "transition": "ease-in-out"
+      },
+      "actions": [
+        { "do": "showTetrahedron", "id": "tetrahedron_MPQN", "vertices": ["M", "P", "Q", "N"], "color": "#ff6666", "opacity": 0.3 }
+      ]
+    },
+    {
+      "id": "explore",
+      "narration": "让我们移动P点，观察体积变化。无论P在哪，体积都不变！",
+      "camera": "isometric",
+      "showMeasurements": ["volume_MPQN"],
+      "actions": [
+        { "do": "animatePoint", "target": "P", "from": 0, "to": 1, "duration": 3 },
+        { "do": "animatePoint", "target": "P", "from": 1, "to": 0.5, "duration": 1.5 },
+        { "do": "animatePoint", "target": "Q", "from": 0, "to": 1, "duration": 3 }
+      ]
+    },
+    {
+      "id": "conclusion",
+      "narration": "所以，三棱锥M-PQN的体积与P、Q的位置无关，是一个定值1/12。",
+      "camera": "isometric",
+      "actions": [
+        { "do": "pulse", "target": "tetrahedron_MPQN", "color": "#ff4444", "times": 3 }
+      ]
+    }
+  ]
+}

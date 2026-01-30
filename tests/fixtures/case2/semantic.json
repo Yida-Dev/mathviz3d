@@ -1,0 +1,17 @@
+{
+  "problemId": "case-2-tetrahedron-plane",
+  "problemText": "在正四面体ABCD中，E是BC的三等分点（靠近B），F是AD的中点，求EF的长度和直线EF与平面ABC的夹角。",
+  "baseGeometry": {
+    "type": "tetrahedron",
+    "size": 1
+  },
+  "points": [
+    { "id": "E", "type": "ratio", "from": "B", "to": "C", "ratio": 0.333 },
+    { "id": "F", "type": "midpoint", "of": ["A", "D"] }
+  ],
+  "measurements": [
+    { "id": "dist_EF", "type": "distance", "points": ["E", "F"] },
+    { "id": "angle_EF_ABC", "type": "angle", "points": ["E", "F", "A", "B", "C"] }
+  ],
+  "question": "求EF的长度和直线EF与平面ABC的夹角"
+}

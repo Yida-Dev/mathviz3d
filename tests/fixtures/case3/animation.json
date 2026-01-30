@@ -1,0 +1,58 @@
+{
+  "title": "正方形翻折问题 - 面积计算",
+  "scenes": [
+    {
+      "id": "intro",
+      "narration": "这是一个边长为1的正方形ABCD。",
+      "camera": "top",
+      "actions": [
+        { "do": "fadeIn", "target": "geometry", "duration": 1.5 },
+        { "do": "fadeIn", "target": "vertexLabels", "duration": 1 }
+      ]
+    },
+    {
+      "id": "show-diagonal",
+      "narration": "我们将沿对角线BD进行折叠。",
+      "camera": "top",
+      "actions": [
+        { "do": "drawLine", "id": "line_BD", "from": "B", "to": "D", "style": "dashed", "color": "#dc2626" },
+        { "do": "highlight", "target": "A", "color": "#f97316" }
+      ]
+    },
+    {
+      "id": "folding",
+      "narration": "将A点沿BD折叠，使其到达A'的位置。",
+      "camera": {
+        "spherical": { "radius": 2.5, "theta": 45, "phi": 45 },
+        "lookAt": "center",
+        "transition": "ease-in-out"
+      },
+      "actions": [
+        { "do": "fold", "foldId": "fold_BD", "fromAngle": 0, "toAngle": 90, "duration": 3 }
+      ]
+    },
+    {
+      "id": "measure",
+      "narration": "当折叠角度使得A'C等于1时。",
+      "camera": {
+        "spherical": { "radius": 2.5, "theta": 60, "phi": 35 },
+        "lookAt": "center",
+        "transition": "ease"
+      },
+      "showMeasurements": ["dist_ApC"],
+      "actions": [
+        { "do": "drawLine", "id": "line_ApC", "from": "A'", "to": "C", "style": "solid", "color": "#2563eb" }
+      ]
+    },
+    {
+      "id": "conclusion",
+      "narration": "此时折叠后图形的面积约为0.866。",
+      "camera": "isometric",
+      "showMeasurements": ["area_folded"],
+      "actions": [
+        { "do": "showPlane", "id": "plane_folded", "points": ["A'", "B", "C", "D"], "color": "#10b981", "opacity": 0.3 },
+        { "do": "pulse", "target": "plane_folded", "color": "#10b981", "times": 2 }
+      ]
+    }
+  ]
+}

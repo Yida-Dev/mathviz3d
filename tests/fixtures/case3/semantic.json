@@ -1,0 +1,32 @@
+{
+  "problemId": "case-3-fold-area",
+  "problemText": "将正方形ABCD沿对角线BD折叠，使A点到达A'的位置，当A'C = 1时，求折叠后图形的面积。",
+  "baseGeometry": {
+    "type": "square",
+    "size": 1
+  },
+  "points": [
+    { "id": "A", "type": "vertex" },
+    { "id": "B", "type": "vertex" },
+    { "id": "C", "type": "vertex" },
+    { "id": "D", "type": "vertex" }
+  ],
+  "folds": [
+    {
+      "id": "fold_BD",
+      "hinge": ["B", "D"],
+      "movingPoints": ["A"],
+      "foldedPoints": ["A'"],
+      "angleParam": "foldAngle",
+      "defaultAngle": 90
+    }
+  ],
+  "params": [
+    { "id": "foldAngle", "min": 0, "max": 180, "default": 90 }
+  ],
+  "measurements": [
+    { "id": "dist_ApC", "type": "distance", "points": ["A'", "C"] },
+    { "id": "area_folded", "type": "area", "points": ["A'", "B", "C", "D"] }
+  ],
+  "question": "当A'C = 1时，求折叠后图形的面积"
+}

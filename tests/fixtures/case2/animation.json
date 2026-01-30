@@ -1,0 +1,70 @@
+{
+  "title": "正四面体截面问题 - 距离与角度",
+  "scenes": [
+    {
+      "id": "intro",
+      "narration": "这是一个棱长为1的正四面体ABCD。",
+      "camera": "isometric",
+      "actions": [
+        { "do": "fadeIn", "target": "geometry", "duration": 1.5 },
+        { "do": "fadeIn", "target": "vertexLabels", "duration": 1 }
+      ]
+    },
+    {
+      "id": "mark-E",
+      "narration": "E是BC的三等分点，靠近B端。",
+      "camera": {
+        "spherical": { "radius": 2.0, "theta": 30, "phi": 25 },
+        "lookAt": "E",
+        "transition": "ease-in-out"
+      },
+      "actions": [
+        { "do": "drawLine", "id": "line_BC", "from": "B", "to": "C", "style": "solid", "color": "#2563eb" },
+        { "do": "highlight", "target": "E", "color": "#f97316" }
+      ]
+    },
+    {
+      "id": "mark-F",
+      "narration": "F是AD的中点。",
+      "camera": {
+        "spherical": { "radius": 2.0, "theta": 120, "phi": 30 },
+        "lookAt": "F",
+        "transition": "ease-in-out"
+      },
+      "actions": [
+        { "do": "drawLine", "id": "line_AD", "from": "A", "to": "D", "style": "solid", "color": "#2563eb" },
+        { "do": "highlight", "target": "F", "color": "#0d9488" }
+      ]
+    },
+    {
+      "id": "show-EF",
+      "narration": "我们要求的是线段EF的长度。",
+      "camera": "isometric",
+      "showMeasurements": ["dist_EF"],
+      "actions": [
+        { "do": "drawLine", "id": "line_EF", "from": "E", "to": "F", "style": "solid", "color": "#dc2626" }
+      ]
+    },
+    {
+      "id": "show-plane",
+      "narration": "以及直线EF与底面ABC的夹角。",
+      "camera": {
+        "spherical": { "radius": 2.5, "theta": 45, "phi": 20 },
+        "lookAt": "center",
+        "transition": "ease-in-out"
+      },
+      "actions": [
+        { "do": "showPlane", "id": "plane_ABC", "points": ["A", "B", "C"], "color": "#3b82f6", "opacity": 0.2 }
+      ]
+    },
+    {
+      "id": "conclusion",
+      "narration": "EF的长度约为0.726，与底面ABC的夹角约为34.2度。",
+      "camera": "isometric",
+      "showMeasurements": ["dist_EF", "angle_EF_ABC"],
+      "actions": [
+        { "do": "pulse", "target": "line_EF", "color": "#dc2626", "times": 2 }
+      ]
+    }
+  ]
+}
