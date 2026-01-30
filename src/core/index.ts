@@ -1,2 +1,14 @@
-// Core modules will be implemented here
-export {}
+export { CoordCalculator } from '@/core/coord-calculator'
+export { Validator } from '@/core/validator'
+export { AutoFixer } from '@/core/auto-fixer'
+export { buildGeometryData } from '@/core/geometry-data'
+export { Renderer } from '@/core/renderer'
+export { Compiler } from '@/core/compiler'
+export { Player } from '@/core/player'
+
+export type { AnimationScript, EvalContext, SemanticDefinition, Vec3 } from '@/core/types'
+export type { GeometryData } from '@/core/geometry-data'
+export type { SceneState } from '@/core/scene-state'
+export type { AutoFixResult, FixApplied, ValidationError, ValidationResult, ValidationWarning } from '@/core/validation'
+export type { ElementDefinition, ElementRegistry } from '@/core/element-registry'
+export type { ActionTrack, CompiledScene, Timeline } from '@/core/timeline'
