@@ -185,21 +185,33 @@ export class Renderer {
 
   private initBaseGeometry(): void {
     const facesGeom = buildFaceGeometry(this.geometryData.vertices, this.geometryData.faces)
-    const faceMat = new THREE.MeshPhongMaterial({
+    // 透明材质的经典陷阱：
+    // - Three.js 无法对单个 Mesh 内部三角形做“稳定的深度排序”
+    // - DoubleSide + transparent 时更容易出现穿插/闪烁
+    //
+    // 解决方案（官方手册建议的两遍渲染思路）：拆成 BackSide + FrontSide 两个 Mesh，
+    // 并通过 renderOrder 确保背面先画、正面后画。
+    const baseFaceMaterial = {
       color: 0xffffff,
       transparent: true,
       opacity: 0.15,
       shininess: 60,
-      side: THREE.DoubleSide,
+      // faces 使用 depthWrite=false，避免透明面写入深度导致其它透明对象（辅助面等）被遮挡
       depthWrite: false,
-    })
+    } as const
 
-    const faces = new THREE.Mesh(facesGeom, faceMat)
-    faces.renderOrder = 1
-    this.baseGroup.add(faces)
+    const backFaces = new THREE.Mesh(facesGeom, new THREE.MeshPhongMaterial({ ...baseFaceMaterial, side: THREE.BackSide }))
+    backFaces.renderOrder = 0
+    this.baseGroup.add(backFaces)
+
+    const frontFaces = new THREE.Mesh(facesGeom, new THREE.MeshPhongMaterial({ ...baseFaceMaterial, side: THREE.FrontSide }))
+    frontFaces.renderOrder = 1
+    this.baseGroup.add(frontFaces)
 
     const edgesGeom = buildEdgeGeometry(this.geometryData.vertices, this.geometryData.edges)
     const edgesMat = new THREE.LineBasicMaterial({ color: 0x1e293b })
+    // 避免线框先写深度，导致后绘制的透明面片在边缘处被 depthTest 裁掉（表现为“破碎/裂缝”）
+    edgesMat.depthWrite = false
     const edges = new THREE.LineSegments(edgesGeom, edgesMat)
     edges.renderOrder = 2
     this.baseGroup.add(edges)

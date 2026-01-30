@@ -75,13 +75,13 @@ export function Header(props: HeaderProps) {
       </div>
 
       {/* actions */}
-      <div className="flex items-center justify-end gap-2 w-64">
+      <div className="flex items-center justify-end gap-2 w-80">
         <label className="text-xs text-slate-500 hidden xl:block" htmlFor="case-select">
           用例
         </label>
         <select
           id="case-select"
-          className="h-9 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary-600/10 focus:border-primary-600"
+          className="h-9 shrink-0 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary-600/10 focus:border-primary-600"
           value={selectedCaseId}
           onChange={(e: ChangeEvent<HTMLSelectElement>) => onCaseChange(e.target.value)}
           aria-label="用例"
@@ -91,7 +91,13 @@ export function Header(props: HeaderProps) {
           <option value="case3">case3（fold）</option>
         </select>
 
-        <Button variant="ghost" size="sm" onClick={onOpenSettings} leftIcon={<i className="ph-bold ph-gear text-base" aria-hidden />}>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onOpenSettings}
+          className="shrink-0 whitespace-nowrap"
+          leftIcon={<i className="ph-bold ph-gear text-base" aria-hidden />}
+        >
           设置
         </Button>
 
@@ -100,6 +106,7 @@ export function Header(props: HeaderProps) {
           size="sm"
           onClick={onExport}
           disabled={mode !== 'video'}
+          className="shrink-0 whitespace-nowrap"
           leftIcon={<i className="ph-bold ph-export text-base" aria-hidden />}
         >
           导出视频
