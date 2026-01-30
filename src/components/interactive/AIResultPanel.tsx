@@ -34,6 +34,11 @@ export function AIResultPanel(props: { semantic: SemanticDefinition }) {
           {measurements.join('、') || '（无）'}
         </li>
       </ul>
+
+      <div className="mt-3 pt-3 border-t border-blue-100">
+        <div className="text-xs font-semibold text-slate-900 mb-1">原题干</div>
+        <div className="text-xs text-slate-700 whitespace-pre-wrap leading-relaxed">{semantic.problemText?.trim() || '（无）'}</div>
+      </div>
     </div>
   )
 }
