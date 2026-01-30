@@ -412,7 +412,14 @@ function App() {
         onRequestCloseLeftPanel={() => setIsLeftPanelOpen(false)}
       />
 
-      <ExportModal open={exportOpen} onClose={() => setExportOpen(false)} />
+      <ExportModal
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        caseId={selectedCaseId}
+        timeline={compileResult?.timeline ?? null}
+        geometryData={geometryData}
+        elementRegistry={compileResult?.elementRegistry}
+      />
       <SettingsModal
         open={settingsOpen}
         draft={apiSettings.draft}

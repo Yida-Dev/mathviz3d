@@ -96,6 +96,31 @@ test.describe('Phase 4 UI', () => {
     await expect(cell).toBeVisible()
     await expect(cell).toContainText('0.0417')
   })
+
+  test('视频模式：导出应触发下载并更新进度（mock 导出）', async ({ page }) => {
+    await page.addInitScript(() => {
+      ;(window as any).__MATHVIZ_E2E_EXPORT__ = async ({ options }: any) => {
+        options.onProgress(0)
+        // 模拟一点异步延迟，避免 UI 竞争条件
+        await new Promise((r) => setTimeout(r, 50))
+        options.onProgress(1)
+        return new Blob([new Uint8Array([1, 2, 3, 4])], { type: 'video/mp4' })
+      }
+    })
+
+    await page.goto('/?case=case1&mode=video')
+
+    await page.getByRole('button', { name: '导出视频' }).click()
+    await expect(page.getByRole('dialog')).toBeVisible()
+
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('button', { name: '开始导出' }).click(),
+    ])
+
+    await expect(page.getByTestId('export-progress-text')).toHaveText('100%')
+    expect(download.suggestedFilename()).toMatch(/\.mp4$/)
+  })
 })
 
 async function readFirstNumber(locator: Locator): Promise<number> {
