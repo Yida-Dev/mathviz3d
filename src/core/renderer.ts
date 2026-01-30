@@ -104,9 +104,13 @@ export class Renderer {
   render(state: SceneState): void {
     if (this.disposed) return
 
-    // camera
-    this.camera.position.set(state.camera.position.x, state.camera.position.y, state.camera.position.z)
-    this.camera.lookAt(state.camera.lookAt.x, state.camera.lookAt.y, state.camera.lookAt.z)
+    // 交互模式：相机由 OrbitControls 驱动；视频模式：相机由 Player.getState(t) 驱动
+    const isInteractive = state.currentSceneId === 'interactive'
+    this.controls.enabled = isInteractive
+    if (!isInteractive) {
+      this.camera.position.set(state.camera.position.x, state.camera.position.y, state.camera.position.z)
+      this.camera.lookAt(state.camera.lookAt.x, state.camera.lookAt.y, state.camera.lookAt.z)
+    }
 
     // 动点/翻折点更新
     const ctx: EvalContext = { params: state.paramValues, foldAngles: state.foldAngles }
