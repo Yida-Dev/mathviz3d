@@ -1,4 +1,4 @@
-import type { EvalContext, SemanticDefinition, Vec3 } from '@/core/types'
+import type { EvalContext, FoldDefinition, SemanticDefinition, Vec3 } from '@/core/types'
 import { CoordCalculator } from '@/core/coord-calculator'
 
 export interface GeometryData {
@@ -16,6 +16,9 @@ export interface GeometryData {
 
   // 测量值（同上：可为静态或动态）
   measurements: Map<string, number | ((context: EvalContext) => number)>
+
+  // 翻折定义（用于渲染层把“可动面/边”绑定到 foldedPoints）
+  folds?: FoldDefinition[]
 }
 
 export function buildGeometryData(semantic: SemanticDefinition): GeometryData {
@@ -56,6 +59,7 @@ export function buildGeometryData(semantic: SemanticDefinition): GeometryData {
     faces: calc.getBaseFaces(),
     points,
     measurements,
+    folds: semantic.folds ?? [],
   }
 }
 
@@ -72,4 +76,3 @@ function baseVertexIds(type: SemanticDefinition['baseGeometry']['type']): string
       return []
   }
 }
-

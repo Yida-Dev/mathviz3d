@@ -74,7 +74,13 @@ const DEFAULT_SQUARE_EDGES: Array<[string, string]> = [
   ['D', 'A'],
 ]
 
-const DEFAULT_SQUARE_FACES: string[][] = [['A', 'B', 'C', 'D']]
+// square 的填充面使用对角线 BD 进行三角化（ABD + BCD）：
+// - 平面状态下与 ABC+ACD 等价
+// - 翻折（沿 BD）场景下更直观：ABD 作为“可动面”，可被替换为 A'BD
+const DEFAULT_SQUARE_FACES: string[][] = [
+  ['A', 'B', 'D'],
+  ['B', 'C', 'D'],
+]
 
 export class CoordCalculator {
   private readonly vertices: VertexDict

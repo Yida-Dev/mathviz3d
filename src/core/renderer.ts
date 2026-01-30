@@ -20,6 +20,12 @@ export class Renderer {
   private readonly labelsGroup = new THREE.Group()
   private readonly auxiliaryGroup = new THREE.Group()
 
+  private baseFacesGeom: THREE.BufferGeometry | null = null
+  private baseEdgesGeom: THREE.BufferGeometry | null = null
+
+  // movingPointId -> foldedPointId（用于把“可动面/边”替换到 foldedPoints 上）
+  private readonly foldVertexReplacements = new Map<string, string>()
+
   private readonly pointMeshes = new Map<string, THREE.Object3D>()
   private readonly labelSprites = new Map<string, THREE.Sprite>()
   private readonly animationObjects = new Map<string, THREE.Object3D>()
@@ -29,6 +35,12 @@ export class Renderer {
   constructor(container: HTMLElement, geometryData: GeometryData) {
     this.container = container
     this.geometryData = geometryData
+    for (const fold of geometryData.folds ?? []) {
+      const n = Math.min(fold.movingPoints.length, fold.foldedPoints.length)
+      for (let i = 0; i < n; i++) {
+        this.foldVertexReplacements.set(fold.movingPoints[i], fold.foldedPoints[i])
+      }
+    }
 
     const { width, height } = getContainerSize(container)
 
@@ -127,6 +139,9 @@ export class Renderer {
       if (label) label.position.set(coord.x, coord.y + 0.2, coord.z)
     }
 
+    // 翻折：更新基础几何的“可动面/边”（例如 square 沿 BD 折叠）
+    this.updateBaseGeometry(ctx)
+
     // 动画元素更新（辅助线/面/四面体等）
     for (const update of this.animationUpdaters.values()) {
       update(ctx)
@@ -184,6 +199,8 @@ export class Renderer {
     this.baseGroup.clear()
     this.pointsGroup.clear()
     this.labelsGroup.clear()
+    this.baseFacesGeom = null
+    this.baseEdgesGeom = null
     this.pointMeshes.clear()
     this.labelSprites.clear()
     this.animationObjects.clear()
@@ -194,6 +211,9 @@ export class Renderer {
 
   private initBaseGeometry(): void {
     const facesGeom = buildFaceGeometry(this.geometryData.vertices, this.geometryData.faces)
+    // 翻折场景会更新 position attribute，显式声明为动态，避免 three.js 走静态路径
+    ;(facesGeom.getAttribute('position') as THREE.BufferAttribute).setUsage(THREE.DynamicDrawUsage)
+    this.baseFacesGeom = facesGeom
     // 透明材质的经典陷阱：
     // - Three.js 无法对单个 Mesh 内部三角形做“稳定的深度排序”
     // - DoubleSide + transparent 时更容易出现穿插/闪烁
@@ -218,12 +238,62 @@ export class Renderer {
     this.baseGroup.add(frontFaces)
 
     const edgesGeom = buildEdgeGeometry(this.geometryData.vertices, this.geometryData.edges)
+    ;(edgesGeom.getAttribute('position') as THREE.BufferAttribute).setUsage(THREE.DynamicDrawUsage)
+    this.baseEdgesGeom = edgesGeom
     const edgesMat = new THREE.LineBasicMaterial({ color: 0x1e293b })
     // 避免线框先写深度，导致后绘制的透明面片在边缘处被 depthTest 裁掉（表现为“破碎/裂缝”）
     edgesMat.depthWrite = false
     const edges = new THREE.LineSegments(edgesGeom, edgesMat)
     edges.renderOrder = 2
     this.baseGroup.add(edges)
+  }
+
+  private updateBaseGeometry(ctx: EvalContext): void {
+    if (this.foldVertexReplacements.size === 0) return
+    if (!this.baseFacesGeom || !this.baseEdgesGeom) return
+
+    const resolveBaseVertex = (id: string): Vec3 => {
+      const replacement = this.foldVertexReplacements.get(id)
+      if (replacement) return resolvePoint(this.geometryData, replacement, ctx)
+      return this.geometryData.vertices.get(id) ?? resolvePoint(this.geometryData, id, ctx)
+    }
+
+    // 1) faces：按初始化时相同的拓扑/三角化顺序，原地更新 position attribute
+    const faceAttr = this.baseFacesGeom.getAttribute('position') as THREE.BufferAttribute
+    const faceArr = faceAttr.array as Float32Array
+    let f = 0
+    for (const face of this.geometryData.faces) {
+      if (face.length < 3) continue
+      const vs = face.map((id) => resolveBaseVertex(id))
+      if (vs.length !== face.length) continue
+
+      if (vs.length === 3) {
+        f = writeTri(faceArr, f, vs[0], vs[1], vs[2])
+        continue
+      }
+      if (vs.length === 4) {
+        f = writeTri(faceArr, f, vs[0], vs[1], vs[2])
+        f = writeTri(faceArr, f, vs[0], vs[2], vs[3])
+        continue
+      }
+      for (let i = 1; i + 1 < vs.length; i++) {
+        f = writeTri(faceArr, f, vs[0], vs[i], vs[i + 1])
+      }
+    }
+    faceAttr.needsUpdate = true
+    this.baseFacesGeom.computeVertexNormals()
+
+    // 2) edges
+    const edgeAttr = this.baseEdgesGeom.getAttribute('position') as THREE.BufferAttribute
+    const edgeArr = edgeAttr.array as Float32Array
+    let e = 0
+    for (const [a, b] of this.geometryData.edges) {
+      const va = resolveBaseVertex(a)
+      const vb = resolveBaseVertex(b)
+      e = writeVec3(edgeArr, e, va)
+      e = writeVec3(edgeArr, e, vb)
+    }
+    edgeAttr.needsUpdate = true
   }
 
   private initPointsAndLabels(): void {
@@ -435,6 +505,21 @@ function buildFaceGeometry(vertices: Map<string, Vec3>, faces: Array<string[]>):
 
 function pushTri(out: number[], a: Vec3, b: Vec3, c: Vec3): void {
   out.push(a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z)
+}
+
+function writeTri(out: Float32Array, offset: number, a: Vec3, b: Vec3, c: Vec3): number {
+  let i = offset
+  i = writeVec3(out, i, a)
+  i = writeVec3(out, i, b)
+  i = writeVec3(out, i, c)
+  return i
+}
+
+function writeVec3(out: Float32Array, offset: number, v: Vec3): number {
+  out[offset + 0] = v.x
+  out[offset + 1] = v.y
+  out[offset + 2] = v.z
+  return offset + 3
 }
 
 function createTextSprite(text: string, opts: { color: string; font: string }): THREE.Sprite {
