@@ -47,6 +47,8 @@ Thumbs.db
 .claude/
 .cursor/
 .trellis/
+prompts/
+memory.md
 AGENTS.md
 CLAUDE.md
 docs/
