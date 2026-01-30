@@ -63,7 +63,7 @@
     },
     {
       "id": "conclusion",
-      "narration": "所以，三棱锥M-PQN的体积与P、Q的位置无关，是一个定值1/12。",
+      "narration": "所以，三棱锥M-PQN的体积与P、Q的位置无关，是一个定值1/24。",
       "camera": "isometric",
       "actions": [
         { "do": "pulse", "target": "tetrahedron_MPQN", "color": "#ff4444", "times": 3 }
