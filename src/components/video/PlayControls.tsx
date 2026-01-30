@@ -11,10 +11,13 @@ export interface PlayControlsProps {
   onPrev?: () => void
   onNext?: () => void
   markers?: number[] // 关键帧（秒）
+  playbackRate?: number
+  onChangePlaybackRate?: (rate: number) => void
 }
 
 export function PlayControls(props: PlayControlsProps) {
-  const { isPlaying, currentTime, duration, onPlay, onPause, onSeek, onPrev, onNext, markers } = props
+  const { isPlaying, currentTime, duration, onPlay, onPause, onSeek, onPrev, onNext, markers, playbackRate = 1, onChangePlaybackRate } =
+    props
 
   const canPlay = duration > 0
 
@@ -79,6 +82,19 @@ export function PlayControls(props: PlayControlsProps) {
           </div>
         </div>
         <div className="text-xs font-mono text-slate-500 w-12">{formatTime(duration)}</div>
+        {onChangePlaybackRate && (
+          <select
+            className="h-9 rounded-md border border-slate-200 bg-white px-2 text-xs font-mono text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary-600/10 focus:border-primary-600"
+            value={String(playbackRate)}
+            onChange={(e) => onChangePlaybackRate(Number(e.target.value))}
+            aria-label="播放速度"
+          >
+            <option value="0.5">0.5x</option>
+            <option value="1">1x</option>
+            <option value="1.5">1.5x</option>
+            <option value="2">2x</option>
+          </select>
+        )}
       </div>
     </div>
   )

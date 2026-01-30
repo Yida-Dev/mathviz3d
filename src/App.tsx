@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { MainCanvas } from '@/components/MainCanvas'
 import { AppLayout } from '@/components/layout/AppLayout'
@@ -179,28 +179,74 @@ function App() {
     return compiler.compile(script, semantic)
   }, [mode, compiler, script, semantic])
 
+  const [playbackRate, setPlaybackRate] = useState<number>(() => {
+    if (typeof window === 'undefined') return 1
+    const raw = window.localStorage.getItem('mathviz:playbackRate')
+    const v = raw != null ? Number(raw) : 1
+    return v === 0.5 || v === 1 || v === 1.5 || v === 2 ? v : 1
+  })
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem('mathviz:playbackRate', String(playbackRate))
+  }, [playbackRate])
+
   const { state: videoState, currentTime, duration, isPlaying, play, pause, seek } = usePlayer(
     compileResult?.timeline ?? null,
     player,
+    playbackRate,
   )
 
-  const onPrevScene = () => {
+  const currentSceneId = videoState?.currentSceneId ?? null
+
+  const onPrevScene = useCallback(() => {
     const timeline = compileResult?.timeline
-    const s = videoState?.currentSceneId
+    const s = currentSceneId
     if (!timeline || !s) return
     const idx = timeline.scenes.findIndex((x) => x.id === s)
     const prev = timeline.scenes[Math.max(0, idx - 1)]
     seek(prev.startTime)
-  }
+  }, [compileResult, currentSceneId, seek])
 
-  const onNextScene = () => {
+  const onNextScene = useCallback(() => {
     const timeline = compileResult?.timeline
-    const s = videoState?.currentSceneId
+    const s = currentSceneId
     if (!timeline || !s) return
     const idx = timeline.scenes.findIndex((x) => x.id === s)
     const next = timeline.scenes[Math.min(timeline.scenes.length - 1, idx + 1)]
     seek(next.startTime)
-  }
+  }, [compileResult, currentSceneId, seek])
+
+  // 视频模式快捷键：空格播放/暂停，左右键上一/下一步
+  useEffect(() => {
+    if (mode !== 'video') return
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null
+      const tag = target?.tagName?.toUpperCase()
+      const isEditable = Boolean(target?.isContentEditable) || tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT'
+      if (isEditable) return
+
+      if (e.code === 'Space') {
+        e.preventDefault()
+        if (isPlaying) pause()
+        else play()
+        return
+      }
+      if (e.code === 'ArrowLeft') {
+        e.preventDefault()
+        onPrevScene()
+        return
+      }
+      if (e.code === 'ArrowRight') {
+        e.preventDefault()
+        onNextScene()
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [isPlaying, mode, onNextScene, onPrevScene, pause, play])
 
   const videoSteps = useMemo(() => {
     const timeline = compileResult?.timeline
@@ -335,6 +381,8 @@ function App() {
           onPrev={onPrevScene}
           onNext={onNextScene}
           markers={compileResult?.timeline.scenes.map((s) => s.startTime) ?? []}
+          playbackRate={playbackRate}
+          onChangePlaybackRate={setPlaybackRate}
         />
       </TimelinePanel>
     ) : undefined

@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import type { SceneState } from '@/core/scene-state'
 import type { Timeline } from '@/core/timeline'
 import type { Player } from '@/core/player'
 
-export function usePlayer(timeline: Timeline | null, player: Player | null) {
+export function usePlayer(timeline: Timeline | null, player: Player | null, playbackRate: number = 1) {
   const [currentTime, setCurrentTime] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
 
@@ -34,7 +34,8 @@ export function usePlayer(timeline: Timeline | null, player: Player | null) {
       lastTsRef.current = ts
 
       if (last != null) {
-        const deltaSec = (ts - last) / 1000
+        const rate = Number.isFinite(playbackRate) && playbackRate > 0 ? playbackRate : 1
+        const deltaSec = ((ts - last) / 1000) * rate
         setCurrentTime((prev) => {
           const next = clamp(prev + deltaSec, 0, timeline.duration)
           if (next >= timeline.duration) {
@@ -54,18 +55,18 @@ export function usePlayer(timeline: Timeline | null, player: Player | null) {
       rafRef.current = null
       lastTsRef.current = null
     }
-  }, [isPlaying, timeline, player])
+  }, [isPlaying, timeline, player, playbackRate])
 
-  const seek = (time: number) => {
+  const seek = useCallback((time: number) => {
     const next = clamp(time, 0, duration)
     setCurrentTime(next)
-  }
+  }, [duration])
 
-  const play = () => {
+  const play = useCallback(() => {
     if (duration <= 0) return
     setIsPlaying(true)
-  }
-  const pause = () => setIsPlaying(false)
+  }, [duration])
+  const pause = useCallback(() => setIsPlaying(false), [])
 
   const state: SceneState | null = useMemo(() => {
     if (!timeline || !player) return null
@@ -87,4 +88,3 @@ export function usePlayer(timeline: Timeline | null, player: Player | null) {
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value))
 }
-
