@@ -1,8 +1,10 @@
 import type { ChangeEvent } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 
 import type { Breakpoint } from '@/hooks/useBreakpoint'
 import type { AppMode } from '@/hooks/useAppMode'
 import { Button } from '@/components/ui/Button'
+import { isAiConfigured, useAiConfigStore } from '@/stores/ai-config-store'
 import { cn } from '@/utils/cn'
 
 export interface HeaderProps {
@@ -36,6 +38,9 @@ export function Header(props: HeaderProps) {
   } = props
 
   const isTablet = breakpoint === 'tablet'
+  const aiConfig = useAiConfigStore(useShallow((s) => ({ apiKey: s.apiKey, baseUrl: s.baseUrl, model: s.model })))
+  const configured = isAiConfigured(aiConfig)
+  const openDialog = useAiConfigStore((s) => s.openDialog)
 
   return (
     <header className="h-16 bg-white border-b border-slate-200 px-6 shadow-sm flex items-center justify-between">
@@ -94,11 +99,14 @@ export function Header(props: HeaderProps) {
         <Button
           variant="ghost"
           size="sm"
-          onClick={onOpenSettings}
+          onClick={() => (onOpenSettings ? onOpenSettings() : openDialog())}
           className="shrink-0 whitespace-nowrap"
           leftIcon={<i className="ph-bold ph-gear text-base" aria-hidden />}
         >
-          设置
+          <span className="relative inline-flex items-center">
+            设置
+            {!configured && <span className="ml-1 h-2 w-2 rounded-full bg-red-500" aria-label="未配置 AI" />}
+          </span>
         </Button>
 
         <Button

@@ -1,38 +1,69 @@
 import type { AnimationScript, SemanticDefinition } from '@/core/types'
-import type { CaseId } from '@/types/app'
+import { AutoFixer } from '@/core/auto-fixer'
+import { Validator } from '@/core/validator'
+import type { ValidationError } from '@/core/validation'
+import type { AiPipelineProgress, AiPipelineResult, StoryPlan } from '@/services/ai-types'
 
-import case1Semantic from '../../tests/fixtures/case1/semantic.json'
-import case1Script from '../../tests/fixtures/case1/animation.json'
-import case2Semantic from '../../tests/fixtures/case2/semantic.json'
-import case2Script from '../../tests/fixtures/case2/animation.json'
-import case3Semantic from '../../tests/fixtures/case3/semantic.json'
-import case3Script from '../../tests/fixtures/case3/animation.json'
+import { understand } from '@/services/agents/understander'
+import { plan } from '@/services/agents/planner'
+import { code as codeAgent } from '@/services/agents/coder'
 
-export interface AiPipelineMockResult {
-  caseId: CaseId
-  semantic: SemanticDefinition
-  script: AnimationScript
+export async function runAiPipeline(file: File, onProgress?: (p: AiPipelineProgress) => void): Promise<AiPipelineResult> {
+  // Stage 1: Understand
+  onProgress?.({ stage: 'understand', progress: 0, message: '正在分析题目图片...' })
+  const semantic = await understand(file)
+  onProgress?.({ stage: 'understand', progress: 33, message: '题目分析完成' })
+
+  // Stage 2: Plan
+  onProgress?.({ stage: 'plan', progress: 33, message: '正在设计讲解方案...' })
+  const { explanation, storyPlan } = await plan(semantic)
+  onProgress?.({ stage: 'plan', progress: 66, message: '讲解方案设计完成' })
+
+  // Stage 3: Code + Validate + AutoFix + Retry
+  onProgress?.({ stage: 'code', progress: 66, message: '正在生成动画脚本...' })
+  const script = await generateScriptWithRetry(semantic, storyPlan, 3, onProgress)
+  onProgress?.({ stage: 'code', progress: 100, message: '动画脚本生成完成' })
+
+  return { semantic, explanation, storyPlan, script }
 }
 
-/**
- * AI Pipeline Mock（Phase 4.5）
- * - 固定延迟返回测试数据（用于打通 UploadZone → AI → UI 的链路）
- * - 通过文件名做简单路由：case2/case3 关键字可触发不同返回
- */
-export async function runAiPipelineMock(file: File): Promise<AiPipelineMockResult> {
-  await delay(800)
+async function generateScriptWithRetry(
+  semantic: SemanticDefinition,
+  storyPlan: StoryPlan,
+  maxRetries: number,
+  onProgress?: (p: AiPipelineProgress) => void,
+): Promise<AnimationScript> {
+  const validator = new Validator()
+  const fixer = new AutoFixer()
 
-  const name = (file?.name ?? '').toLowerCase()
-  if (name.includes('case3') || name.includes('fold')) {
-    return { caseId: 'case3', semantic: case3Semantic as any, script: case3Script as any }
-  }
-  if (name.includes('case2') || name.includes('tetra')) {
-    return { caseId: 'case2', semantic: case2Semantic as any, script: case2Script as any }
-  }
-  return { caseId: 'case1', semantic: case1Semantic as any, script: case1Script as any }
-}
+  let previousErrors: ValidationError[] = []
 
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms))
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    if (attempt > 0) {
+      onProgress?.({
+        stage: 'code',
+        progress: 66 + attempt * 10,
+        message: `重试生成动画脚本 (${attempt + 1}/${maxRetries})...`,
+        retry: attempt,
+      })
+    }
+
+    const script = await codeAgent(semantic, storyPlan, previousErrors)
+
+    onProgress?.({ stage: 'validate', progress: 0, message: '正在校验动画脚本...' })
+    const validationResult = validator.validate(script, semantic)
+    if (validationResult.valid) {
+      return script
+    }
+
+    const fixResult = fixer.fix(script, validationResult.errors, semantic)
+    if (fixResult.fixed && fixResult.script) {
+      return fixResult.script as AnimationScript
+    }
+
+    previousErrors = fixResult.remainingErrors
+  }
+
+  throw new Error('动画脚本生成失败，请重试')
 }
 

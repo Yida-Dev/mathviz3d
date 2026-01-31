@@ -6,10 +6,12 @@ import { Header } from '@/components/layout/Header'
 import { LeftPanel, LeftPanelBody, LeftPanelSectionHeader } from '@/components/layout/LeftPanel'
 import { TimelinePanel } from '@/components/layout/TimelinePanel'
 import { AIResultPanel } from '@/components/interactive/AIResultPanel'
+import { ErrorDisplay } from '@/components/interactive/ErrorDisplay'
 import { MeasureCard } from '@/components/interactive/MeasureCard'
 import { ParamControls } from '@/components/interactive/ParamControls'
+import { PipelineProgress } from '@/components/interactive/PipelineProgress'
 import { UploadZone } from '@/components/interactive/UploadZone'
-import { SettingsModal } from '@/components/SettingsModal'
+import { SettingsDialog } from '@/components/settings/SettingsDialog'
 import { ExplanationPanel } from '@/components/video/ExplanationPanel'
 import { ExportModal } from '@/components/video/ExportModal'
 import { PlayControls } from '@/components/video/PlayControls'
@@ -21,11 +23,10 @@ import { Player } from '@/core/player'
 import type { EvalContext, SemanticDefinition } from '@/core/types'
 import type { SceneState } from '@/core/scene-state'
 import { useAppMode, type AppMode } from '@/hooks/useAppMode'
-import { useApiSettings } from '@/hooks/useApiSettings'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
 import { useParams } from '@/hooks/useParams'
 import { usePlayer } from '@/hooks/usePlayer'
-import { runAiPipelineMock } from '@/services/ai-pipeline'
+import { usePipelineStore } from '@/stores/pipeline-store'
 import type { CaseId } from '@/types/app'
 
 import case1Semantic from '../tests/fixtures/case1/semantic.json'
@@ -42,11 +43,8 @@ function App() {
   const { mode, setMode } = useAppMode(initialFromUrl.mode)
 
   const [selectedCaseId, setSelectedCaseId] = useState<CaseId>(initialFromUrl.caseId)
-  const [aiLoading, setAiLoading] = useState(false)
-  const [aiError, setAiError] = useState<string | null>(null)
-
-  const apiSettings = useApiSettings()
-  const [settingsOpen, setSettingsOpen] = useState(false)
+  const pipelineState = usePipelineStore((s) => s.state)
+  const resetPipeline = usePipelineStore((s) => s.reset)
 
   // Tablet 左侧面板折叠
   const [isLeftPanelOpen, setIsLeftPanelOpen] = useState<boolean>(() => {
@@ -73,7 +71,7 @@ function App() {
     }
   }, [breakpoint, isLeftPanelOpen])
 
-  const semantic: SemanticDefinition = useMemo(() => {
+  const fixtureSemantic: SemanticDefinition = useMemo(() => {
     switch (selectedCaseId) {
       case 'case1':
         return case1Semantic as any
@@ -86,7 +84,7 @@ function App() {
     }
   }, [selectedCaseId])
 
-  const script = useMemo(() => {
+  const fixtureScript = useMemo(() => {
     switch (selectedCaseId) {
       case 'case1':
         return case1Script as any
@@ -99,6 +97,10 @@ function App() {
     }
   }, [selectedCaseId])
 
+  const aiResult = pipelineState.status === 'success' ? pipelineState.result : null
+  const semantic = aiResult?.semantic ?? fixtureSemantic
+  const script = aiResult?.script ?? fixtureScript
+
   // 同步 URL（便于 E2E/调试）
   useEffect(() => {
     const qs = new URLSearchParams(window.location.search)
@@ -109,21 +111,8 @@ function App() {
   }, [selectedCaseId, mode])
 
   const handleCaseChange = (caseId: CaseId) => {
-    setAiError(null)
+    resetPipeline()
     setSelectedCaseId(caseId)
-  }
-
-  const handleUploadFile = async (file: File) => {
-    setAiLoading(true)
-    setAiError(null)
-    try {
-      const result = await runAiPipelineMock(file)
-      setSelectedCaseId(result.caseId)
-    } catch (err) {
-      setAiError(err instanceof Error ? err.message : String(err))
-    } finally {
-      setAiLoading(false)
-    }
   }
 
   // ========== 交互模式 ==========
@@ -291,18 +280,9 @@ function App() {
         <>
           <LeftPanelSectionHeader icon="ph-image" title="题目来源" />
           <LeftPanelBody>
-            <UploadZone loading={aiLoading} onFile={handleUploadFile} />
-            {aiError && (
-              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                <div className="flex items-start gap-2">
-                  <i className="ph-fill ph-warning-circle text-red-600 mt-0.5" aria-hidden />
-                  <div>
-                    <div className="font-bold">解析失败</div>
-                    <div className="mt-1">{aiError}</div>
-                  </div>
-                </div>
-              </div>
-            )}
+            <UploadZone />
+            <PipelineProgress />
+            <ErrorDisplay />
             <AIResultPanel semantic={semantic} />
 
             <div>
@@ -400,7 +380,6 @@ function App() {
             onToggleLeftPanel={() => setIsLeftPanelOpen((v) => !v)}
             selectedCaseId={selectedCaseId}
             onCaseChange={(v) => handleCaseChange(v as CaseId)}
-            onOpenSettings={() => setSettingsOpen(true)}
             onExport={() => setExportOpen(true)}
           />
         }
@@ -415,19 +394,12 @@ function App() {
       <ExportModal
         open={exportOpen}
         onClose={() => setExportOpen(false)}
-        caseId={selectedCaseId}
+        caseId={semantic.problemId || selectedCaseId}
         timeline={compileResult?.timeline ?? null}
         geometryData={geometryData}
         elementRegistry={compileResult?.elementRegistry}
       />
-      <SettingsModal
-        open={settingsOpen}
-        draft={apiSettings.draft}
-        onChangeDraft={apiSettings.setDraft}
-        onClose={() => setSettingsOpen(false)}
-        onSave={apiSettings.save}
-        onResetToDefault={apiSettings.resetToDefault}
-      />
+      <SettingsDialog />
     </>
   )
 }

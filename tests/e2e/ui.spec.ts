@@ -42,6 +42,14 @@ test.describe('Phase 4 UI', () => {
   })
 
   test('交互模式：UploadZone 上传应触发 mock AI 并切换用例（case1 → case3）', async ({ page }) => {
+    // 预置 AI 配置（避免弹出设置对话框阻塞上传流程）
+    await page.addInitScript(() => {
+      window.localStorage.setItem(
+        'ai-config',
+        JSON.stringify({ state: { apiKey: 'mock', baseUrl: 'mock', model: 'mock' }, version: 0 }),
+      )
+    })
+
     await page.goto('/?case=case1&mode=interactive')
 
     // 展开侧栏（Tablet 默认折叠）

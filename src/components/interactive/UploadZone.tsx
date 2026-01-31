@@ -1,22 +1,31 @@
 import { useId, useState } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 
 import { cn } from '@/utils/cn'
+import { isAiConfigured, useAiConfigStore } from '@/stores/ai-config-store'
+import { usePipelineStore } from '@/stores/pipeline-store'
 
-export interface UploadZoneProps {
-  loading?: boolean
-  onFile?: (file: File) => void
-}
-
-export function UploadZone(props: UploadZoneProps) {
-  const { loading = false, onFile } = props
+export function UploadZone() {
   const inputId = useId()
   const [isDragging, setIsDragging] = useState(false)
+  const aiConfig = useAiConfigStore(useShallow((s) => ({ apiKey: s.apiKey, baseUrl: s.baseUrl, model: s.model })))
+  const configured = isAiConfigured(aiConfig)
+  const openSettings = useAiConfigStore((s) => s.openDialog)
+  const run = usePipelineStore((s) => s.run)
+  const pipeline = usePipelineStore((s) => s.state)
+
+  const loading = pipeline.status !== 'idle' && pipeline.status !== 'success' && pipeline.status !== 'error'
 
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault()
     setIsDragging(false)
     const file = e.dataTransfer.files?.[0]
-    if (file) onFile?.(file)
+    if (!file) return
+    if (!configured) {
+      openSettings()
+      return
+    }
+    void run(file)
   }
 
   return (
@@ -29,7 +38,12 @@ export function UploadZone(props: UploadZoneProps) {
         data-testid="upload-input"
         onChange={(e) => {
           const file = e.target.files?.[0]
-          if (file) onFile?.(file)
+          if (!file) return
+          if (!configured) {
+            openSettings()
+            return
+          }
+          void run(file)
         }}
       />
 
