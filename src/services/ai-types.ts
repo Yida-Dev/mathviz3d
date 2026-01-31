@@ -54,12 +54,9 @@ export interface AiPipelineResult {
   script: AnimationScript
 }
 
-export type AiPipelineStage = 'understand' | 'plan' | 'code' | 'validate'
-
-export interface AiPipelineProgress {
-  stage: AiPipelineStage
-  progress: number
-  message: string
-  retry?: number
-}
-
+export type AiPipelineProgress =
+  | { stage: 'understand'; progress: number; message: string }
+  | { stage: 'understood'; progress: number; message: string; semantic: SemanticDefinition }
+  | { stage: 'plan'; progress: number; message: string }
+  | { stage: 'code'; progress: number; message: string; retry?: number }
+  | { stage: 'validate'; progress: number; message: string }

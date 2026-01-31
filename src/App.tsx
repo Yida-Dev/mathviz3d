@@ -97,9 +97,18 @@ function App() {
     }
   }, [selectedCaseId])
 
-  const aiResult = pipelineState.status === 'success' ? pipelineState.result : null
-  const semantic = aiResult?.semantic ?? fixtureSemantic
-  const script = aiResult?.script ?? fixtureScript
+  const semantic: SemanticDefinition =
+    pipelineState.status === 'understood' ||
+    pipelineState.status === 'planning' ||
+    pipelineState.status === 'coding' ||
+    pipelineState.status === 'validating'
+      ? pipelineState.semantic
+      : pipelineState.status === 'success'
+        ? pipelineState.result.semantic
+        : fixtureSemantic
+
+  // 视频脚本只有在 Pipeline 全部完成后才可用；未完成时继续使用内置 fixture，避免视频模式空引用
+  const script: any = pipelineState.status === 'success' ? pipelineState.result.script : fixtureScript
 
   // 同步 URL（便于 E2E/调试）
   useEffect(() => {

@@ -41,6 +41,8 @@ function mapProgress(
       return { title: '已接收图片', percent: 5, detail: '准备开始分析...' }
     case 'understanding':
       return { title: '读题中', percent: state.progress, detail: state.message }
+    case 'understood':
+      return { title: '已完成读题', percent: 33, detail: state.message }
     case 'planning':
       return { title: '规划讲解', percent: state.progress, detail: state.message }
     case 'coding':
@@ -55,4 +57,3 @@ function mapProgress(
       return { title: '处理中' }
   }
 }
-

@@ -1,5 +1,6 @@
 import type { SemanticDefinition } from '@/core/types'
 import { useAiConfigStore } from '@/stores/ai-config-store'
+import { logAiCall } from '@/services/ai-debug-log'
 import { callAI } from '@/services/ai-client'
 import { parseJsonFromText } from '@/services/ai-json'
 import type { PlannerOutput } from '@/services/ai-types'
@@ -12,19 +13,43 @@ export async function plan(semantic: SemanticDefinition): Promise<PlannerOutput>
     return mockPlan(semantic)
   }
 
-  const result = await callAI(systemPrompt, [
-    {
-      type: 'text',
-      text: [
-        '请根据以下 SemanticDefinition 生成 Explanation 与 StoryPlan（严格按 Schema 输出 JSON）。',
-        '',
-        'SemanticDefinition:',
-        JSON.stringify(semantic, null, 2),
-      ].join('\n'),
-    },
-  ])
+  const inputSummary = `problemId=${semantic.problemId || '(unknown)'}`
+  const startTime = Date.now()
 
-  return parseJsonFromText<PlannerOutput>(result)
+  let rawOutput = ''
+  try {
+    rawOutput = await callAI(systemPrompt, [
+      {
+        type: 'text',
+        text: [
+          '请根据以下 SemanticDefinition 生成 Explanation 与 StoryPlan（严格按 Schema 输出 JSON）。',
+          '',
+          'SemanticDefinition:',
+          JSON.stringify(semantic, null, 2),
+        ].join('\n'),
+      },
+    ])
+  } catch (err) {
+    logAiCall({
+      agent: 'planner',
+      inputSummary,
+      rawOutput: '',
+      error: String(err),
+      durationMs: Date.now() - startTime,
+    })
+    throw err
+  }
+
+  const durationMs = Date.now() - startTime
+
+  try {
+    const parsed = parseJsonFromText<PlannerOutput>(rawOutput)
+    logAiCall({ agent: 'planner', inputSummary, rawOutput, parsedJson: parsed, durationMs })
+    return parsed
+  } catch (err) {
+    logAiCall({ agent: 'planner', inputSummary, rawOutput, error: String(err), durationMs })
+    throw err
+  }
 }
 
 function mockPlan(semantic: SemanticDefinition): PlannerOutput {
@@ -60,4 +85,3 @@ function mockPlan(semantic: SemanticDefinition): PlannerOutput {
     },
   }
 }
-

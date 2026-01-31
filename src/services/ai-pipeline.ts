@@ -12,7 +12,7 @@ export async function runAiPipeline(file: File, onProgress?: (p: AiPipelineProgr
   // Stage 1: Understand
   onProgress?.({ stage: 'understand', progress: 0, message: '正在分析题目图片...' })
   const semantic = await understand(file)
-  onProgress?.({ stage: 'understand', progress: 33, message: '题目分析完成' })
+  onProgress?.({ stage: 'understood', progress: 33, message: '题目分析完成，正在渲染 3D 模型...', semantic })
 
   // Stage 2: Plan
   onProgress?.({ stage: 'plan', progress: 33, message: '正在设计讲解方案...' })
@@ -66,4 +66,3 @@ async function generateScriptWithRetry(
 
   throw new Error('动画脚本生成失败，请重试')
 }
-
