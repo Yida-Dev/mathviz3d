@@ -57,6 +57,7 @@ export const usePipelineStore = create<PipelineStoreState>((set, get) => ({
   run: async (file: File) => {
     // 多次上传/重试可能并发触发：用 runId 防止旧请求回写覆盖新结果
     const runId = get().activeRunId + 1
+    // 新 run 开始时清空旧状态，避免失败时显示旧数据
     set({ activeRunId: runId, lastFile: file, state: { status: 'uploading' } })
     let semantic: SemanticDefinition | null = null
     try {
@@ -97,10 +98,10 @@ export const usePipelineStore = create<PipelineStoreState>((set, get) => ({
     } catch (err) {
       if (get().activeRunId !== runId) return
       const message = err instanceof Error ? err.message : String(err)
-      // MVP：除“未配置”外默认可重试
+      // MVP：除"未配置"外默认可重试
       const retryable = !message.includes('请先在设置中配置')
-      const s = semantic ?? extractSemantic(get().state)
-      set({ state: { status: 'error', message, retryable, semantic: s ?? undefined } })
+      // 只保留本次运行中已获取的 semantic，不从旧状态提取（避免缓存问题）
+      set({ state: { status: 'error', message, retryable, semantic: semantic ?? undefined } })
     }
   },
 }))
