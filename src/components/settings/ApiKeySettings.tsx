@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -7,7 +8,8 @@ import { useAiConfigStore } from '@/stores/ai-config-store'
 export function ApiKeySettings(props: { onSaved?: () => void }) {
   const { onSaved } = props
 
-  const current = useAiConfigStore((s) => ({ apiKey: s.apiKey, baseUrl: s.baseUrl, model: s.model }))
+  // 注意：selector 返回对象时必须配合 shallow，否则 React 18 下 getSnapshot 每次返回新对象会导致无限循环/白屏
+  const current = useAiConfigStore(useShallow((s) => ({ apiKey: s.apiKey, baseUrl: s.baseUrl, model: s.model })))
   const setConfig = useAiConfigStore((s) => s.setConfig)
   const reset = useAiConfigStore((s) => s.reset)
 
@@ -117,4 +119,3 @@ export function ApiKeySettings(props: { onSaved?: () => void }) {
     </div>
   )
 }
-
