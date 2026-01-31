@@ -1,93 +1,193 @@
-# MathViz3D - 几何题可视化系统
+<div align="center">
 
-将几何题图片转化为可交互 3D 模型 + AI 讲解 + 带字幕视频。
+# MathViz3D
 
-## 核心功能
+**将几何题图片转化为可交互 3D 模型 + AI 讲解 + 带字幕视频**
+
+[![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=white)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Three.js](https://img.shields.io/badge/Three.js-r170-000000?style=flat-square&logo=three.js&logoColor=white)](https://threejs.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
+[![Cloudflare](https://img.shields.io/badge/Cloudflare-Pages-F38020?style=flat-square&logo=cloudflare&logoColor=white)](https://pages.cloudflare.com/)
+[![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
+
+[English](#english) | [Demo](#demo) | [Quick Start](#quick-start)
+
+</div>
+
+---
+
+## Features
+
+<table>
+<tr>
+<td width="33%" align="center">
 
 ### AI 智能识题
-上传几何题图片，AI 自动识别：
-- 几何体类型（正方体、四面体、长方体等）
-- 关键点定义（顶点、中点、比例点、动点）
-- 翻折关系
-- 测量需求（体积、距离、角度、面积）
-- 选择题选项（自动提取 A/B/C/D）
+
+上传几何题图片，GPT-4o 自动识别几何体类型、关键点、翻折关系、测量需求和选择题选项
+
+</td>
+<td width="33%" align="center">
 
 ### 实时 3D 可视化
-- Three.js 渲染几何体，支持旋转、缩放、拖拽
-- 动点滑块控制，实时查看几何变化
-- 测量值实时计算显示
+
+Three.js 渲染，支持旋转缩放拖拽，动点滑块控制，测量值实时计算
+
+</td>
+<td width="33%" align="center">
 
 ### 视频导出
-- WebCodecs 硬件加速编码（H.264/VP9）
-- 字幕合成，支持 1080p/4K 输出
-- 纯前端导出，无需服务器
 
-## 技术栈
+WebCodecs 硬件加速，H.264/VP9 编码，字幕合成，1080p/4K 输出，纯前端
 
-| 层级 | 技术 |
-|------|------|
-| 前端框架 | React + TypeScript |
-| 3D 渲染 | Three.js + React Three Fiber |
-| 视频编码 | WebCodecs + Mediabunny |
-| 状态管理 | Zustand |
-| 样式 | Tailwind CSS |
-| AI | OpenAI GPT-4o (vision) |
-| 部署 | Cloudflare Pages + Workers + D1 |
+</td>
+</tr>
+</table>
 
-## 快速开始
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|:------|:-----------|
+| **Frontend** | React 18 + TypeScript 5 + Vite |
+| **3D Engine** | Three.js + React Three Fiber + Drei |
+| **Video** | WebCodecs + Mediabunny |
+| **State** | Zustand |
+| **Styling** | Tailwind CSS |
+| **AI** | OpenAI GPT-4o (Vision) |
+| **Deploy** | Cloudflare Pages + Workers + D1 |
+
+---
+
+## Quick Start
 
 ```bash
-# 安装依赖
+# Clone
+git clone https://github.com/your-username/mathviz3d.git
+cd mathviz3d
+
+# Install
 npm install
 
-# 本地开发
+# Dev
 npm run dev
 
-# 构建
+# Build
 npm run build
 ```
 
-访问 http://localhost:5173
+Open [http://localhost:5173](http://localhost:5173)
 
-## 项目结构
+---
+
+## Architecture
 
 ```
+                    +------------------+
+                    |   Upload Image   |
+                    +--------+---------+
+                             |
+                             v
++------------+    +----------+----------+    +---------------+
+| Understander|-->| SemanticDefinition |-->| CoordCalculator|
+| (GPT-4o)   |    +----------+----------+    +-------+-------+
++------------+               |                       |
+      |                      v                       v
+      |              +-------+-------+       +-------+-------+
+      +------------->|    Planner    |       |   Renderer    |
+                     | (Explanation) |       |  (Three.js)   |
+                     +-------+-------+       +---------------+
+                             |
+                             v
+                     +-------+-------+
+                     |     Coder     |
+                     |(AnimationScript)
+                     +-------+-------+
+                             |
+              +--------------+--------------+
+              v              v              v
+        +-----+----+  +------+-----+  +-----+------+
+        | Compiler |  |   Player   |  |  Exporter  |
+        | Timeline |  | SceneState |  |    MP4     |
+        +----------+  +------------+  +------------+
+```
+
+---
+
+## Supported Geometry
+
+| Type | Description |
+|:-----|:------------|
+| `cube` | Cube |
+| `cuboid` | Cuboid / Rectangular Prism |
+| `tetrahedron` | Regular Tetrahedron |
+| `square` | Square (for folding problems) |
+| `prism` | Prism |
+| `pyramid` | Pyramid |
+
+---
+
+## Project Structure
+
+```
+mathviz3d/
 ├── src/
-│   ├── components/         # React 组件
-│   │   ├── interactive/    # 交互模式（3D 模型 + 滑块）
-│   │   └── three/          # Three.js 渲染器
-│   ├── core/               # 核心引擎
-│   │   ├── coord-calculator.ts   # 坐标计算（支持动点、翻折）
-│   │   ├── player.ts             # 动画播放器（纯函数）
-│   │   ├── video-exporter.ts     # 视频导出
-│   │   └── renderer.ts           # Three.js 渲染封装
-│   ├── services/           # AI 服务
-│   └── stores/             # 状态管理
-├── worker/                 # API 代理（Cloudflare Worker）
-└── prompts/                # AI Prompt
+│   ├── components/           # React Components
+│   │   ├── interactive/      # 3D Viewer + Controls
+│   │   └── three/            # Three.js Renderer
+│   ├── core/                 # Core Engine
+│   │   ├── coord-calculator  # Coordinate Calculation
+│   │   ├── player            # Animation Player (Pure Function)
+│   │   ├── compiler          # Timeline Compiler
+│   │   ├── renderer          # Three.js Wrapper
+│   │   └── video-exporter    # MP4 Export
+│   ├── services/             # AI Services
+│   └── stores/               # Zustand Stores
+├── worker/                   # Cloudflare Worker (API Proxy)
+├── prompts/                  # AI Prompts
+└── docs/                     # Design Documents
 ```
 
-## AI 管线
+---
 
+## Deploy
+
+See [DEPLOY.md](DEPLOY.md) for step-by-step deployment guide.
+
+**Quick Deploy:**
+
+```bash
+# Frontend -> Cloudflare Pages
+npm run build
+npx wrangler pages deploy dist --project-name mathviz3d
+
+# API -> Cloudflare Workers
+cd worker && npx wrangler deploy
 ```
-题目图片 → Understander → SemanticDefinition → CoordCalculator → 3D 渲染
-                ↓
-            Planner → Explanation + StoryPlan → AnimationScript → 视频
-```
 
-## 支持的几何体
+---
 
-| 类型 | 说明 |
-|------|------|
-| cube | 正方体 |
-| cuboid | 长方体 |
-| tetrahedron | 正四面体 |
-| square | 正方形（平面翻折题） |
+## English
 
-## 部署
+MathViz3D is a geometry problem visualization system that transforms geometry problem images into interactive 3D models with AI explanations and subtitle videos.
 
-详见 [DEPLOY.md](DEPLOY.md)
+**Key Features:**
+- **AI Recognition**: Upload geometry problem images, GPT-4o automatically identifies geometry type, key points, folding relations, and multiple-choice options
+- **3D Visualization**: Three.js rendering with rotation, zoom, drag, dynamic point sliders, and real-time measurements
+- **Video Export**: WebCodecs hardware acceleration, H.264/VP9 encoding, subtitle synthesis, 1080p/4K output, pure frontend
+
+---
 
 ## License
 
-MIT
+[MIT](LICENSE)
+
+---
+
+<div align="center">
+
+**Built with React + Three.js + GPT-4o**
+
+</div>
