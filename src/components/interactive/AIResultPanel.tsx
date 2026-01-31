@@ -6,6 +6,8 @@ export function AIResultPanel(props: { semantic: SemanticDefinition }) {
   const points = semantic.points.map((p) => p.id)
   const params = (semantic.params ?? []).map((p) => p.id)
   const measurements = (semantic.measurements ?? []).map((m) => m.id)
+  const choices = semantic.choices ?? []
+  const hasChoices = choices.length > 0
 
   return (
     <div className="rounded-xl bg-blue-50/50 border border-blue-100 p-4" data-testid="ai-result-panel">
@@ -31,9 +33,30 @@ export function AIResultPanel(props: { semantic: SemanticDefinition }) {
         </li>
         <li>
           <span className="font-semibold">测量：</span>
-          {measurements.join('、') || '（无）'}
+          {hasChoices && measurements.length === 0 ? '（选择题，见下方选项）' : measurements.join('、') || '（无）'}
         </li>
       </ul>
+
+      {hasChoices && (
+        <div className="mt-3 pt-3 border-t border-blue-100">
+          <div className="text-xs font-semibold text-slate-900 mb-2">选项</div>
+          <ul className="text-xs text-slate-700 space-y-1.5">
+            {choices.map((choice) => (
+              <li key={choice.label} className="flex items-start gap-2">
+                <span className="font-semibold shrink-0">{choice.label}.</span>
+                <span className="flex-1">{choice.text}</span>
+                <span
+                  className={`shrink-0 px-1.5 py-0.5 rounded text-[10px] ${
+                    choice.verifiable ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'
+                  }`}
+                >
+                  {choice.verifiable ? '可验证' : '暂不支持'}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="mt-3 pt-3 border-t border-blue-100">
         <div className="text-xs font-semibold text-slate-900 mb-1">原题干</div>
