@@ -1,0 +1,4 @@
+# v001-chinese-baseline
+# 原始中文基准版本
+# 注意：由于原始中文版本未被 git 跟踪，此文件夹暂时为空
+# 如需添加中文基准版本，请手动放入 understander.md、planner.md、coder.md
