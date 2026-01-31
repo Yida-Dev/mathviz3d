@@ -208,7 +208,7 @@ describe('CoordCalculator', () => {
       expectVec3Close(C, [0.5, 0.5, 0], 1e-12)
     })
 
-    it('应支持 cuboid 顶点坐标', () => {
+    it('应支持 cuboid 顶点坐标（归一化后按最大边 6）', () => {
       const semantic: any = {
         problemId: 'extra',
         problemText: '',
@@ -217,8 +217,10 @@ describe('CoordCalculator', () => {
         question: '',
       }
       const calc = new CoordCalculator(semantic)
-      expectVec3Close(calc.getVertexCoord('A'), [-1, -2, -3], 1e-12)
-      expectVec3Close(calc.getVertexCoord('C1'), [1, 2, 3], 1e-12)
+      // scaleFactor = 1/6, 归一化后:
+      // A = [-2/2 * (1/6), -4/2 * (1/6), -6/2 * (1/6)] = [-1/6, -2/6, -1/2]
+      expectVec3Close(calc.getVertexCoord('A'), [-1 / 6, -2 / 6, -3 / 6], 1e-12)
+      expectVec3Close(calc.getVertexCoord('C1'), [1 / 6, 2 / 6, 3 / 6], 1e-12)
       expect(calc.getBaseEdges().length).toBeGreaterThan(0)
       expect(calc.getBaseFaces().length).toBeGreaterThan(0)
     })

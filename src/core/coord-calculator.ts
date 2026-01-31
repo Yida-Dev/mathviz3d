@@ -86,6 +86,7 @@ export class CoordCalculator {
   private readonly vertices: VertexDict
   private readonly edges: Array<[string, string]>
   private readonly faces: string[][]
+  private readonly scaleFactor: number
 
   private readonly pointDefs: Map<string, SemanticDefinition['points'][number]>
   private readonly foldDefs: FoldDefinition[]
@@ -93,7 +94,8 @@ export class CoordCalculator {
   private readonly defaultParams: Map<string, number>
 
   constructor(semantic: SemanticDefinition) {
-    this.vertices = buildBaseVertices(semantic.baseGeometry)
+    this.scaleFactor = computeScaleFactor(semantic.baseGeometry)
+    this.vertices = buildBaseVertices(semantic.baseGeometry, this.scaleFactor)
     const { edges, faces } = buildBaseTopology(semantic.baseGeometry.type)
     this.edges = edges
     this.faces = faces
@@ -102,6 +104,10 @@ export class CoordCalculator {
     this.foldDefs = semantic.folds ?? []
     this.measurementDefs = new Map((semantic.measurements ?? []).map((m) => [m.id, m]))
     this.defaultParams = new Map((semantic.params ?? []).map((p) => [p.id, p.default]))
+  }
+
+  getScaleFactor(): number {
+    return this.scaleFactor
   }
 
   getVertexCoord(vertexId: string): Vec3 {
@@ -129,10 +135,14 @@ export class CoordCalculator {
     const ctx = this.normalizeContext(context)
 
     const pts = def.points.map((id) => this.getPointCoordInternal(id, ctx, { ignoreFolds: false }))
+    let rawValue: number
+
     switch (def.type) {
       case 'distance': {
         assertPointsLength(def, 2)
-        return distance(pts[0], pts[1])
+        rawValue = distance(pts[0], pts[1])
+        // 距离：量纲 1，除以 scaleFactor 还原
+        return rawValue / this.scaleFactor
       }
       case 'angle': {
         if (pts.length === 3) {
@@ -142,6 +152,7 @@ export class CoordCalculator {
           const denom = length(v1) * length(v2)
           if (denom === 0) return 0
           const cos = dot(v1, v2) / denom
+          // 角度：量纲 0，无需还原
           return radToDeg(safeAcos(cos))
         }
         if (pts.length === 5) {
@@ -152,6 +163,7 @@ export class CoordCalculator {
           const denom = length(L) * length(N)
           if (denom === 0) return 0
           const sin = Math.abs(dot(L, N)) / denom
+          // 角度：量纲 0，无需还原
           return radToDeg(safeAsin(sin))
         }
         throw new Error(`angle 测量 points 长度不支持: ${pts.length}`)
@@ -159,16 +171,18 @@ export class CoordCalculator {
       case 'area': {
         if (pts.length === 3) {
           const [A, B, C] = pts
-          return length(cross(sub(B, A), sub(C, A))) / 2
-        }
-        if (pts.length === 4) {
+          rawValue = length(cross(sub(B, A), sub(C, A))) / 2
+        } else if (pts.length === 4) {
           // 四边形面积：按 ABC + ACD 三角剖分求和
           const [A, B, C, D] = pts
           const area1 = length(cross(sub(B, A), sub(C, A))) / 2
           const area2 = length(cross(sub(C, A), sub(D, A))) / 2
-          return area1 + area2
+          rawValue = area1 + area2
+        } else {
+          throw new Error(`area 测量 points 长度不支持: ${pts.length}`)
         }
-        throw new Error(`area 测量 points 长度不支持: ${pts.length}`)
+        // 面积：量纲 2，除以 scaleFactor^2 还原
+        return rawValue / (this.scaleFactor * this.scaleFactor)
       }
       case 'volume': {
         assertPointsLength(def, 4)
@@ -176,7 +190,9 @@ export class CoordCalculator {
         const v1 = sub(B, A)
         const v2 = sub(C, A)
         const v3 = sub(D, A)
-        return Math.abs(dot(v1, cross(v2, v3))) / 6
+        rawValue = Math.abs(dot(v1, cross(v2, v3))) / 6
+        // 体积：量纲 3，除以 scaleFactor^3 还原
+        return rawValue / Math.pow(this.scaleFactor, 3)
       }
       default:
         return assertNever(def.type)
@@ -302,12 +318,35 @@ export class CoordCalculator {
   }
 }
 
-function buildBaseVertices(base: SemanticDefinition['baseGeometry']): VertexDict {
+function computeScaleFactor(base: SemanticDefinition['baseGeometry']): number {
+  const TARGET_SIZE = 1
+
+  switch (base.type) {
+    case 'cube':
+    case 'square': {
+      const size = base.size ?? 1
+      return size > 0 ? TARGET_SIZE / size : 1
+    }
+    case 'cuboid': {
+      const [a = 1, b = 1, c = 1] = base.dimensions ?? [1, 1, 1]
+      const maxDim = Math.max(a, b, c)
+      return maxDim > 0 ? TARGET_SIZE / maxDim : 1
+    }
+    case 'tetrahedron': {
+      const size = base.size ?? 1
+      return size > 0 ? TARGET_SIZE / size : 1
+    }
+    default:
+      return 1
+  }
+}
+
+function buildBaseVertices(base: SemanticDefinition['baseGeometry'], scaleFactor: number): VertexDict {
   const type = base.type
   switch (type) {
     case 'cube': {
       const size = base.size ?? 1
-      const s = size / 2
+      const s = (size * scaleFactor) / 2
       return new Map([
         ['A', vec3(-s, -s, -s)],
         ['B', vec3(s, -s, -s)],
@@ -321,21 +360,24 @@ function buildBaseVertices(base: SemanticDefinition['baseGeometry']): VertexDict
     }
     case 'cuboid': {
       const [a = 1, b = 1, c = 1] = base.dimensions ?? [1, 1, 1]
+      const sa = (a * scaleFactor) / 2
+      const sb = (b * scaleFactor) / 2
+      const sc = (c * scaleFactor) / 2
       return new Map([
-        ['A', vec3(-a / 2, -b / 2, -c / 2)],
-        ['B', vec3(a / 2, -b / 2, -c / 2)],
-        ['C', vec3(a / 2, b / 2, -c / 2)],
-        ['D', vec3(-a / 2, b / 2, -c / 2)],
-        ['A1', vec3(-a / 2, -b / 2, c / 2)],
-        ['B1', vec3(a / 2, -b / 2, c / 2)],
-        ['C1', vec3(a / 2, b / 2, c / 2)],
-        ['D1', vec3(-a / 2, b / 2, c / 2)],
+        ['A', vec3(-sa, -sb, -sc)],
+        ['B', vec3(sa, -sb, -sc)],
+        ['C', vec3(sa, sb, -sc)],
+        ['D', vec3(-sa, sb, -sc)],
+        ['A1', vec3(-sa, -sb, sc)],
+        ['B1', vec3(sa, -sb, sc)],
+        ['C1', vec3(sa, sb, sc)],
+        ['D1', vec3(-sa, sb, sc)],
       ])
     }
     case 'tetrahedron': {
       // 正四面体（棱长 a=1）的一组标准坐标（几何中心为原点）：
       // A: 顶点在 z=+sqrt(6)/4，底面三点在 z=-sqrt(6)/12，底面为等边三角形
-      const a = base.size ?? 1
+      const a = (base.size ?? 1) * scaleFactor
       const sqrt3 = Math.sqrt(3)
       const sqrt6 = Math.sqrt(6)
       return new Map([
@@ -347,7 +389,7 @@ function buildBaseVertices(base: SemanticDefinition['baseGeometry']): VertexDict
     }
     case 'square': {
       const size = base.size ?? 1
-      const s = size / 2
+      const s = (size * scaleFactor) / 2
       return new Map([
         ['A', vec3(-s, -s, 0)],
         ['B', vec3(s, -s, 0)],
