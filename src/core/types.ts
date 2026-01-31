@@ -30,6 +30,7 @@ export interface SemanticDefinition {
   folds?: FoldDefinition[]
   measurements?: MeasurementDefinition[]
   params?: ParamDefinition[]
+  choices?: ChoiceDefinition[] // 可选：选择题的选项
 
   question: string
 }
@@ -60,6 +61,15 @@ export interface MeasurementDefinition {
   id: string
   type: MeasurementType
   points: string[]
+}
+
+// 选择题选项定义
+export interface ChoiceDefinition {
+  label: string // 选项标签：A, B, C, D
+  text: string // 选项文本
+  measurementRef?: string // 可选：关联的 measurement id
+  expectedValue?: number // 可选：期望值（用于验证）
+  verifiable: boolean // 是否可通过当前系统验证
 }
 
 export interface FoldDefinition {

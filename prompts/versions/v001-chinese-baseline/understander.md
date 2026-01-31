@@ -80,7 +80,16 @@
   // - area（三角形）: 3 点
   // - area（四边形）: 4 点
   // - volume: 4 点（四面体的4个顶点）
-  "question": string          // 必填：题目要求
+  "choices": [                // 可选：选择题的选项
+    {
+      "label": string,        // 必填：选项标签，如 "A", "B", "C", "D"
+      "text": string,         // 必填：选项完整文本
+      "measurementRef": string, // 可选：关联的 measurement id
+      "expectedValue": number,  // 可选：期望的数值结果
+      "verifiable": boolean   // 必填：当前系统是否可验证此选项
+    }
+  ],
+  "question": string          // 必填：题目要求（选择题时为核心问题）
 }
 
 ## 约束
@@ -121,6 +130,46 @@
 对于题目要求计算的量（体积、距离、角度、面积）：
 - measurements 数组是否有对应定义？
 - id 命名是否清晰（如 volume_ABCD, distance_PQ, angle_APB）？
+
+## 选择题处理规则
+
+### 识别选择题
+题目包含 "则（）" "下列正确的是" "下列命题" "判断下列" 等表述时，为选择题。
+
+### 处理步骤
+
+1. **提取所有选项**：识别 A/B/C/D 各选项的完整文本
+2. **分析每个选项**：判断选项需要验证的几何量
+3. **生成 measurements**：为可计算的选项生成对应测量
+4. **标记可验证性**：根据当前支持的测量类型标记 verifiable
+
+### 当前支持的测量类型（verifiable: true）
+
+| 类型 | 说明 | points 数量 |
+|------|------|-------------|
+| 点到点距离 | 两点间距离 | 2 点 |
+| 角度（3点） | 三点夹角 | 3 点 |
+| 线面夹角 | 直线与平面夹角 | 5 点: [L1, L2, A, B, C] |
+| 面积 | 三角形/四边形面积 | 3-4 点 |
+| 体积 | 四面体体积 | 4 点 |
+
+### 暂不支持的测量类型（verifiable: false）
+
+| 类型 | 原因 |
+|------|------|
+| 点到直线距离 | 需要扩展 |
+| 异面直线夹角 | 需要扩展 |
+| 平行/垂直判定 | 需要扩展 |
+| 存在性命题 | 无法直接计算 |
+| 轨迹长度 | 需要扩展 |
+
+### 示例映射
+
+- "AB 距离为 4" -> verifiable: true, measurementRef: "dist_AB"
+- "角 ABC 为 90°" -> verifiable: true, measurementRef: "angle_ABC"
+- "四面体体积为 1/6" -> verifiable: true, measurementRef: "volume_xxx"
+- "直线 XX 平行于平面 YY" -> verifiable: false
+- "存在点 P 使得..." -> verifiable: false
 
 ## 几何体类型选择
 
@@ -190,6 +239,53 @@
   "question": "求折叠后A'与C的距离"
 }
 
+### 示例 3：选择题
+
+输入图片描述：棱长为4的正方体，E、F、G分别为棱AD、AB、BC的中点，P为线段D1F上的动点。判断下列命题：A.异面直线夹角；B.存在P使C1G//平面BEP；C.平面垂直；D.点到直线距离。
+
+正确输出：
+{
+  "problemId": "cube-choice-001",
+  "problemText": "在棱长为4的正方体ABCD-A1B1C1D1中，E、F、G分别为棱AD、AB、BC的中点，点P为线段D1F上的动点。判断下列命题是否正确。",
+  "baseGeometry": {
+    "type": "cube",
+    "size": 4
+  },
+  "points": [
+    { "id": "E", "type": "midpoint", "of": ["A", "D"] },
+    { "id": "F", "type": "midpoint", "of": ["A", "B"] },
+    { "id": "G", "type": "midpoint", "of": ["B", "C"] },
+    { "id": "P", "type": "onSegment", "from": "D1", "to": "F", "param": "t" }
+  ],
+  "params": [
+    { "id": "t", "min": 0, "max": 1, "default": 0.5 }
+  ],
+  "measurements": [],
+  "choices": [
+    {
+      "label": "A",
+      "text": "异面直线D1C和BC1所成的角为45度",
+      "verifiable": false
+    },
+    {
+      "label": "B",
+      "text": "存在点P，使得C1G//平面BEP",
+      "verifiable": false
+    },
+    {
+      "label": "C",
+      "text": "对任意点P，平面FCC1垂直于平面BEP",
+      "verifiable": false
+    },
+    {
+      "label": "D",
+      "text": "点B1到直线D1F的距离为4",
+      "verifiable": false
+    }
+  ],
+  "question": "判断下列命题是否正确"
+}
+
 ## 常见错误和修复
 
 | 错误 | 修复 |
@@ -199,6 +295,9 @@
 | 翻折点名不对应 | movingPoints 和 foldedPoints 必须一一对应 |
 | 测量点数量错误 | volume 需要 4 点，distance 需要 2 点 |
 | angle 用 4 点 | 线面夹角必须用 5 点：直线 2 点 + 平面 3 点 |
+| 选择题选项未提取 | 将所有 A/B/C/D 选项提取到 choices 数组 |
+| 缺少 verifiable 字段 | 每个 choice 必须标记 verifiable: true 或 false |
+| 不支持的类型标记为可验证 | 平行/垂直/存在性命题标记 verifiable: false |
 ```
 
 ## User Prompt Template
