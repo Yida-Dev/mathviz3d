@@ -1,88 +1,79 @@
 # MathViz3D - 几何题可视化系统
 
-将几何题图片转化为可交互 3D 模型 + 题目讲解 + 带字幕视频。
+将几何题图片转化为可交互 3D 模型 + AI 讲解 + 带字幕视频。
 
-## 功能特性
+## 核心功能
 
-- **AI 识题**：上传几何题图片，AI 自动识别几何体、点、参数、测量需求
-- **3D 可视化**：实时渲染几何体，支持旋转、缩放、拖拽交互
-- **动点演示**：通过滑块控制动点位置，实时查看体积/距离/角度变化
-- **选择题支持**：自动提取 A/B/C/D 选项，标记可验证状态
-- **讲解生成**：AI 生成解题思路和分步讲解（开发中）
-- **视频导出**：导出带字幕的 MP4 讲解视频（开发中）
+### AI 智能识题
+上传几何题图片，AI 自动识别：
+- 几何体类型（正方体、四面体、长方体等）
+- 关键点定义（顶点、中点、比例点、动点）
+- 翻折关系
+- 测量需求（体积、距离、角度、面积）
+- 选择题选项（自动提取 A/B/C/D）
+
+### 实时 3D 可视化
+- Three.js 渲染几何体，支持旋转、缩放、拖拽
+- 动点滑块控制，实时查看几何变化
+- 测量值实时计算显示
+
+### 视频导出
+- WebCodecs 硬件加速编码（H.264/VP9）
+- 字幕合成，支持 1080p/4K 输出
+- 纯前端导出，无需服务器
 
 ## 技术栈
 
-- **前端**：React + TypeScript + Tailwind CSS
-- **3D 渲染**：Three.js + React Three Fiber
-- **状态管理**：Zustand
-- **AI 服务**：OpenAI GPT-4o (vision)
-- **部署**：Cloudflare Pages + Workers + D1
+| 层级 | 技术 |
+|------|------|
+| 前端框架 | React + TypeScript |
+| 3D 渲染 | Three.js + React Three Fiber |
+| 视频编码 | WebCodecs + Mediabunny |
+| 状态管理 | Zustand |
+| 样式 | Tailwind CSS |
+| AI | OpenAI GPT-4o (vision) |
+| 部署 | Cloudflare Pages + Workers + D1 |
 
 ## 快速开始
 
-### 安装依赖
-
 ```bash
+# 安装依赖
 npm install
-```
 
-### 本地开发
-
-```bash
+# 本地开发
 npm run dev
-```
 
-访问 http://localhost:5173
-
-### 构建
-
-```bash
+# 构建
 npm run build
 ```
 
-### 部署
-
-详见 [DEPLOY.md](DEPLOY.md)
+访问 http://localhost:5173
 
 ## 项目结构
 
 ```
 ├── src/
 │   ├── components/         # React 组件
-│   │   ├── interactive/    # 交互模式组件
-│   │   └── three/          # Three.js 渲染组件
-│   ├── core/               # 核心逻辑
-│   │   ├── types.ts        # 类型定义
-│   │   └── coord-calculator.ts  # 坐标计算器
+│   │   ├── interactive/    # 交互模式（3D 模型 + 滑块）
+│   │   └── three/          # Three.js 渲染器
+│   ├── core/               # 核心引擎
+│   │   ├── coord-calculator.ts   # 坐标计算（支持动点、翻折）
+│   │   ├── player.ts             # 动画播放器（纯函数）
+│   │   ├── video-exporter.ts     # 视频导出
+│   │   └── renderer.ts           # Three.js 渲染封装
 │   ├── services/           # AI 服务
-│   │   ├── ai-pipeline.ts  # AI 管线
-│   │   └── prompts/        # AI Prompt（自动生成）
-│   └── stores/             # Zustand 状态管理
-├── worker/                 # Cloudflare Worker（API 代理）
-├── prompts/                # AI Prompt 源文件
-│   └── current/            # 当前使用的 Prompt 版本
-├── docs/                   # 设计文档
-└── dev-notes/              # 开发笔记
+│   └── stores/             # 状态管理
+├── worker/                 # API 代理（Cloudflare Worker）
+└── prompts/                # AI Prompt
 ```
 
 ## AI 管线
 
 ```
-图片 → Understander → SemanticDefinition → CoordCalculator → 3D 渲染
+题目图片 → Understander → SemanticDefinition → CoordCalculator → 3D 渲染
                 ↓
-           Planner → Explanation + StoryPlan
-                ↓
-            Coder → AnimationScript → 视频
+            Planner → Explanation + StoryPlan → AnimationScript → 视频
 ```
-
-### 三个 AI Agent
-
-| Agent | 角色 | 输入 | 输出 |
-|-------|------|------|------|
-| Understander | 读题专家 | 题目图片 | SemanticDefinition (JSON) |
-| Planner | 数学老师 | SemanticDefinition | Explanation + StoryPlan |
-| Coder | 动画师 | StoryPlan | AnimationScript |
 
 ## 支持的几何体
 
@@ -93,57 +84,9 @@ npm run build
 | tetrahedron | 正四面体 |
 | square | 正方形（平面翻折题） |
 
-## 支持的测量类型
+## 部署
 
-| 类型 | 说明 |
-|------|------|
-| volume | 四面体体积（4 点） |
-| distance | 两点距离（2 点） |
-| angle | 三点夹角 / 线面夹角 |
-| area | 三角形/四边形面积 |
-
-## 开发文档
-
-- [系统架构](docs/[方案]%20系统架构-完整设计方案.md)
-- [AI 设计](docs/[方案]%20AI设计-输入输出规范.md)
-- [基建设计](docs/[方案]%20基建设计-渲染引擎与测试案例.md)
-- [部署指南](DEPLOY.md)
-
-## 配置说明
-
-### 环境变量
-
-在设置页面配置 AI 服务：
-
-- **API Base URL**：OpenAI 兼容的 API 地址
-- **API Key**：API 密钥
-- **Model**：模型名称（需支持 vision）
-
-### 本地存储
-
-配置保存在浏览器 localStorage，key 为 `mathviz3d-settings`。
-
-## 开发命令
-
-```bash
-# 开发服务器
-npm run dev
-
-# 类型检查
-npm run typecheck
-
-# 构建
-npm run build
-
-# 提取 Prompt
-npm run extract-prompts
-
-# 部署前端
-CLOUDFLARE_API_TOKEN="xxx" npx wrangler pages deploy dist --project-name mathviz3d
-
-# 部署 Worker
-cd worker && npx wrangler deploy
-```
+详见 [DEPLOY.md](DEPLOY.md)
 
 ## License
 
