@@ -4,7 +4,7 @@ import { usePipelineStore } from '@/stores/pipeline-store'
 export function ErrorDisplay() {
   const state = usePipelineStore((s) => s.state)
   const retry = usePipelineStore((s) => s.retry)
-  const reset = usePipelineStore((s) => s.reset)
+  const dismissError = usePipelineStore((s) => s.dismissError)
 
   if (state.status !== 'error') return null
 
@@ -21,7 +21,7 @@ export function ErrorDisplay() {
                 重试
               </Button>
             )}
-            <Button variant="outline" size="sm" onClick={() => reset()}>
+            <Button variant="outline" size="sm" onClick={() => dismissError()}>
               关闭
             </Button>
           </div>
@@ -30,4 +30,3 @@ export function ErrorDisplay() {
     </div>
   )
 }
-

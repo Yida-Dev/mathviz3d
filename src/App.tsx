@@ -105,7 +105,9 @@ function App() {
       ? pipelineState.semantic
       : pipelineState.status === 'success'
         ? pipelineState.result.semantic
-        : fixtureSemantic
+        : pipelineState.status === 'error' && pipelineState.semantic
+          ? pipelineState.semantic
+          : fixtureSemantic
 
   // 视频脚本只有在 Pipeline 全部完成后才可用；未完成时继续使用内置 fixture，避免视频模式空引用
   const script: any = pipelineState.status === 'success' ? pipelineState.result.script : fixtureScript
@@ -426,7 +428,10 @@ function parseUrlInitial(): { caseId: CaseId; mode?: AppMode } {
   return { caseId, mode }
 }
 
-function formatMeasurement(type: string, value: number): { text: string; unit?: string } {
+function formatMeasurement(type: string, value: number | null): { text: string; unit?: string; error?: boolean } {
+  if (value === null) {
+    return { text: 'AI 输出错误', error: true }
+  }
   switch (type) {
     case 'distance':
       return { text: value.toFixed(2) }
@@ -459,6 +464,9 @@ function computeConstantMeasurements(calc: CoordCalculator, semantic: SemanticDe
 
   for (const m of defs) {
     const base = calc.getMeasurement(m.id, baseCtx)
+    // 如果测量计算失败，跳过该测量的常量判定
+    if (base === null) continue
+
     let constant = true
 
     for (const p of params) {
@@ -472,6 +480,12 @@ function computeConstantMeasurements(calc: CoordCalculator, semantic: SemanticDe
 
       const low = calc.getMeasurement(m.id, lowCtx)
       const high = calc.getMeasurement(m.id, highCtx)
+
+      // 如果测量计算失败，不认定为常量
+      if (low === null || high === null) {
+        constant = false
+        break
+      }
 
       const eps = 1e-6
       if (Math.abs(low - base) > eps || Math.abs(high - base) > eps) {
